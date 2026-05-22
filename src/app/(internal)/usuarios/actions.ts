@@ -1,9 +1,16 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { userSchema } from '@/lib/validations/user'
 
 export async function createUserAction(formData: FormData) {
+  // Auth check first
+  const callerClient = await createClient()
+  const { data: { user: caller } } = await callerClient.auth.getUser()
+  if (!caller) return { error: 'Não autorizado.' }
+  const callerRole = caller.app_metadata?.role as string
+  if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
+
   const raw = {
     ...Object.fromEntries(formData.entries()),
     notify_new_tickets: formData.get('notify_new_tickets') === 'on',
@@ -35,6 +42,13 @@ export async function createUserAction(formData: FormData) {
 }
 
 export async function updateUserAction(id: string, formData: FormData) {
+  // Auth check first
+  const callerClient = await createClient()
+  const { data: { user: caller } } = await callerClient.auth.getUser()
+  if (!caller) return { error: 'Não autorizado.' }
+  const callerRole = caller.app_metadata?.role as string
+  if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
+
   const raw = {
     ...Object.fromEntries(formData.entries()),
     notify_new_tickets: formData.get('notify_new_tickets') === 'on',
@@ -61,7 +75,14 @@ export async function updateUserAction(id: string, formData: FormData) {
   return { success: true }
 }
 
-export async function deactivateUserAction(id: string) {
+export async function deactivateUserAction(id: string): Promise<{ error?: string } | void> {
+  // Auth check first
+  const callerClient = await createClient()
+  const { data: { user: caller } } = await callerClient.auth.getUser()
+  if (!caller) return { error: 'Não autorizado.' }
+  const callerRole = caller.app_metadata?.role as string
+  if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
+
   const supabase = await createServiceClient()
   await supabase.from('profiles').update({ is_active: false } as never).eq('id', id)
   revalidatePath('/usuarios')
