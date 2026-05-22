@@ -33,10 +33,10 @@ export async function updateSettingsAction(formData: FormData) {
     ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // as never: supabase-js generic constraint quirk with custom Upsert type
   const { error } = await supabase
     .from('platform_settings')
-    .upsert(payload as any)
+    .upsert(payload as never)
 
   if (error) return { error: 'Erro ao salvar configurações.' }
 
