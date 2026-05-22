@@ -20,6 +20,5 @@ export async function insertLog(
   description: string,
   details?: Record<string, unknown>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.from('system_logs') as any).insert(buildLogEntry(category, status, description, details))
+  await supabase.from('system_logs').insert(buildLogEntry(category, status, description, details) as never)
 }
