@@ -16,11 +16,15 @@ export async function updateSettingsAction(formData: FormData) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado.' }
+
+  const role = user.app_metadata?.role as string
+  if (role !== 'admin') return { error: 'Apenas administradores podem alterar configurações.' }
 
   const payload: SettingsUpdate = {
     ...parsed.data,
     id: 1,
-    updated_by: user!.id,
+    updated_by: user.id,
     updated_at: new Date().toISOString(),
   }
 

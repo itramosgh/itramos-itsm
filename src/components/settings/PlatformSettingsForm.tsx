@@ -1,6 +1,6 @@
 'use client'
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { platformSettingsSchema, type PlatformSettingsInput } from '@/lib/validations/settings'
 import { updateSettingsAction } from '@/app/(internal)/configuracoes/actions'
@@ -21,8 +21,7 @@ export function PlatformSettingsForm({ initialData }: Props) {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<PlatformSettingsInput>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(platformSettingsSchema) as any,
+    resolver: zodResolver(platformSettingsSchema) as unknown as Resolver<PlatformSettingsInput>,
     defaultValues: {
       company_name: initialData?.company_name ?? '',
       company_website: initialData?.company_website ?? '',
@@ -69,6 +68,7 @@ export function PlatformSettingsForm({ initialData }: Props) {
     { value: 4, label: 'Qui' },
     { value: 5, label: 'Sex' },
     { value: 6, label: 'Sáb' },
+    { value: 7, label: 'Dom' },
   ]
 
   return (
@@ -156,7 +156,7 @@ export function PlatformSettingsForm({ initialData }: Props) {
                 </label>
               ))}
             </div>
-            {errors.business_hours_days && <p className="text-sm text-destructive mt-1">{errors.business_hours_days.message}</p>}
+            {errors.business_hours_days && <p className="text-sm text-destructive mt-1">{errors.business_hours_days.message ?? 'Selecione ao menos um dia.'}</p>}
           </div>
         </CardContent>
       </Card>
