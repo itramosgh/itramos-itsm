@@ -1,6 +1,7 @@
 import { logoutAction } from '@/app/(auth)/login/actions'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { redirect } from 'next/navigation'
 import type { Database } from '@/types/database'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
@@ -8,12 +9,13 @@ type ProfileRow = Database['public']['Tables']['profiles']['Row']
 export async function Header() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('full_name, role')
-    .eq('id', user!.id)
+    .select('full_name')
+    .eq('id', user.id)
     .single()
-  const profile = profileData as Pick<ProfileRow, 'full_name' | 'role'> | null
+  const profile = profileData as Pick<ProfileRow, 'full_name'> | null
 
   return (
     <header className="h-14 border-b flex items-center justify-between px-6">

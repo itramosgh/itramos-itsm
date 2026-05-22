@@ -1,7 +1,8 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import type { ReactNode } from 'react'
 
-export default function InternalLayout({ children }: { children: React.ReactNode }) {
+export default function InternalLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen">
       <Sidebar />

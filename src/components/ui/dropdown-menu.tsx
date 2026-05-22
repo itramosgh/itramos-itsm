@@ -165,6 +165,9 @@ function DropdownMenuItem({
   onSelect?: () => void
 }) {
   const { setOpen } = React.useContext(DropdownMenuContext)
+  const handleAction = () => {
+    setOpen(false)
+  }
   return (
     <div
       data-slot="dropdown-menu-item"
@@ -178,13 +181,12 @@ function DropdownMenuItem({
       )}
       onClick={(e) => {
         onClick?.(e)
-        setOpen(false)
+        handleAction()
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault()
-          onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>)
-          setOpen(false)
+          handleAction()
         }
       }}
       {...props}

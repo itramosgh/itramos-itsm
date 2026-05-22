@@ -25,7 +25,7 @@ export function Sidebar() {
             href={href}
             className={cn(
               'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
-              pathname.startsWith(href)
+              pathname === href || pathname.startsWith(href + '/')
                 ? 'bg-primary text-primary-foreground'
                 : 'hover:bg-muted'
             )}
