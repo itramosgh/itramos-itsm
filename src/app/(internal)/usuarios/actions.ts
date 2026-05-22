@@ -28,6 +28,7 @@ export async function createUserAction(formData: FormData) {
 
   if (authError) return { error: authError.message }
 
+  // as never: supabase-js generic constraint quirk with custom Insert type
   const { error: profileError } = await supabase.from('profiles').insert({
     id: authData.user.id,
     full_name: parsed.data.full_name,
@@ -64,6 +65,7 @@ export async function updateUserAction(id: string, formData: FormData) {
     })
   }
 
+  // as never: supabase-js generic constraint quirk with custom Update type
   const { error } = await supabase
     .from('profiles')
     .update({ ...parsed.data, updated_at: new Date().toISOString() } as never)
@@ -84,6 +86,8 @@ export async function deactivateUserAction(id: string): Promise<{ error?: string
   if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
 
   const supabase = await createServiceClient()
-  await supabase.from('profiles').update({ is_active: false } as never).eq('id', id)
+  // as never: supabase-js generic constraint quirk with custom Update type
+  const { error } = await supabase.from('profiles').update({ is_active: false } as never).eq('id', id)
+  if (error) return { error: error.message }
   revalidatePath('/usuarios')
 }
