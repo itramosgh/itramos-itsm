@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react'
+import { useState } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { platformSettingsSchema, type PlatformSettingsInput } from '@/lib/validations/settings'
@@ -15,6 +16,24 @@ interface Props {
 
 export function PlatformSettingsForm({ initialData }: Props) {
   const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [logoLightUrl, setLogoLightUrl] = useState(initialData?.logo_light_url ?? '')
+  const [logoDarkUrl, setLogoDarkUrl] = useState(initialData?.logo_dark_url ?? '')
+  const [uploadError, setUploadError] = useState('')
+
+  async function handleLogoUpload(file: File, variant: 'light' | 'dark') {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('variant', variant)
+    const res = await fetch('/api/upload/logo', { method: 'POST', body: fd })
+    const data = await res.json() as { url?: string; error?: string }
+    if (data.error) {
+      setUploadError(data.error)
+    } else if (data.url) {
+      if (variant === 'light') setLogoLightUrl(data.url)
+      else setLogoDarkUrl(data.url)
+      setUploadError('')
+    }
+  }
 
   const {
     register,
@@ -52,6 +71,9 @@ export function PlatformSettingsForm({ initialData }: Props) {
         formData.append(key, String(value))
       }
     })
+
+    if (logoLightUrl) formData.append('logo_light_url', logoLightUrl)
+    if (logoDarkUrl) formData.append('logo_dark_url', logoDarkUrl)
 
     const result = await updateSettingsAction(formData)
     if (result?.error) {
@@ -108,6 +130,50 @@ export function PlatformSettingsForm({ initialData }: Props) {
           <div>
             <label className="text-sm font-medium">WhatsApp</label>
             <input {...register('company_whatsapp')} className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
+          </div>
+
+          {/* Logo uploads */}
+          <div className="space-y-4 pt-2">
+            <p className="text-sm font-semibold">Logotipos</p>
+            {uploadError && (
+              <p className="text-sm text-destructive">{uploadError}</p>
+            )}
+            <div>
+              <label className="text-sm font-medium">Logo (tema claro)</label>
+              {logoLightUrl && (
+                <div className="mt-1 mb-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoLightUrl} alt="Logo claro" className="h-12 object-contain border rounded-md p-1 bg-white" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleLogoUpload(file, 'light')
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Logo (tema escuro)</label>
+              {logoDarkUrl && (
+                <div className="mt-1 mb-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoDarkUrl} alt="Logo escuro" className="h-12 object-contain border rounded-md p-1 bg-gray-900" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleLogoUpload(file, 'dark')
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

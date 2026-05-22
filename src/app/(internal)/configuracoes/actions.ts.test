@@ -16,27 +16,18 @@ export async function updateSettingsAction(formData: FormData) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autorizado.' }
-
-  const role = user.app_metadata?.role as string
-  if (role !== 'admin') return { error: 'Apenas administradores podem alterar configurações.' }
-
-  const logoLightUrl = formData.get('logo_light_url') as string | null
-  const logoDarkUrl = formData.get('logo_dark_url') as string | null
 
   const payload: SettingsUpdate = {
     ...parsed.data,
     id: 1,
-    updated_by: user.id,
+    updated_by: user!.id,
     updated_at: new Date().toISOString(),
-    ...(logoLightUrl ? { logo_light_url: logoLightUrl } : {}),
-    ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('platform_settings')
-    .upsert(payload as any)
+    .upsert(payload)
 
   if (error) return { error: 'Erro ao salvar configurações.' }
 
