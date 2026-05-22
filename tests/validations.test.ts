@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { loginSchema } from '@/lib/validations/auth'
 import { platformSettingsSchema } from '@/lib/validations/settings'
+import { userSchema } from '@/lib/validations/user'
 
 describe('loginSchema', () => {
   it('rejeita e-mail inválido', () => {
@@ -15,6 +16,26 @@ describe('loginSchema', () => {
 
   it('aceita credenciais válidas', () => {
     const result = loginSchema.safeParse({ email: 'user@test.com', password: 'senha123' })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('userSchema', () => {
+  it('rejeita papel inválido', () => {
+    const result = userSchema.safeParse({
+      full_name: 'João',
+      email: 'joao@itramos.com.br',
+      role: 'superadmin',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('aceita usuário válido', () => {
+    const result = userSchema.safeParse({
+      full_name: 'João Silva',
+      email: 'joao@itramos.com.br',
+      role: 'analista',
+    })
     expect(result.success).toBe(true)
   })
 })
