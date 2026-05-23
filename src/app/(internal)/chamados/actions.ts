@@ -5,7 +5,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema } from '@/lib/validations/ticket'
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
-import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
+import { sendEmail, approvalRequestHtml, buildFromAddress, kbLinkHtml } from '@/lib/email'
 import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
@@ -343,4 +343,119 @@ export async function reopenTicketAction(ticketId: string, reason: string, reope
 
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }
+}
+
+export async function searchKbArticlesAction(query: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('kb_articles')
+    .select('id, title, summary, slug')
+    .eq('is_active', true)
+    .ilike('title', `%${query}%`)
+    .limit(10)
+  return { articles: data ?? [] }
+}
+
+export async function linkKbArticleAction(ticketId: string, articleId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const [{ data: article }, { data: ticket }] = await Promise.all([
+    supabase.from('kb_articles').select('id, title, summary, slug').eq('id', articleId).single(),
+    supabase.from('tickets').select('number, title, contact_id, contacts(email)').eq('id', ticketId).single(),
+  ])
+
+  if (!article || !ticket) return { error: 'Chamado ou artigo não encontrado' }
+
+  const { data: link } = await supabase.from('ticket_kb_links').insert({
+    ticket_id: ticketId,
+    kb_article_id: articleId,
+    linked_by: user!.id,
+  } as never).select('confirmation_token').single<{ confirmation_token: string }>()
+
+  if (!link) return { error: 'Erro ao vincular artigo' }
+
+  await supabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'system',
+    content: `Artigo vinculado: "${(article as any).title}"`,
+    author_profile_id: user!.id,
+    is_system: false,
+  } as never)
+
+  const contactEmail = ((ticket as any).contacts as any)?.email
+  if (contactEmail) {
+    const { data: settings } = await supabase
+      .from('platform_settings')
+      .select('email_from_address, email_from_name')
+      .single()
+    const from = buildFromAddress((settings as any)?.email_from_name ?? null, (settings as any)?.email_from_address ?? null)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+
+    await sendEmail({
+      to: contactEmail,
+      subject: `Artigo relacionado ao seu chamado #${(ticket as any).number}`,
+      from,
+      html: kbLinkHtml({
+        ticketNumber: (ticket as any).number,
+        articleTitle: (article as any).title,
+        articleSummary: (article as any).summary,
+        confirmUrl: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=true`,
+        denyUrl: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=false`,
+      }),
+    })
+  }
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function closeWithResolutionAction(ticketId: string, resolution: string, createArticle?: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('title, description, category_id')
+    .eq('id', ticketId)
+    .single<{ title: string; description: string | null; category_id: string | null }>()
+
+  if (!ticket) return { error: 'Chamado não encontrado' }
+
+  await supabase.from('tickets').update({
+    status: 'fechado',
+    closed_at: new Date().toISOString(),
+    resolution,
+  } as never).eq('id', ticketId)
+
+  await supabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'status_change',
+    content: `Chamado fechado. Resolução: ${resolution}`,
+    author_profile_id: user!.id,
+  } as never)
+
+  if (createArticle) {
+    const slug = `${ticket.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
+    await supabase.from('kb_articles').insert({
+      title: ticket.title,
+      summary: resolution.slice(0, 200),
+      slug,
+      body: `${ticket.description ?? ''}\n\n**Resolução:**\n${resolution}`,
+      category_id: ticket.category_id ?? null,
+      source_ticket_id: ticketId,
+      is_active: true,
+      created_by: user!.id,
+    } as never)
+  }
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function closeTicketFormAction(ticketId: string, formData: FormData) {
+  const resolution = formData.get('resolution') as string
+  const createArticle = formData.get('create_article') === 'on'
+  if (!resolution?.trim()) return { error: 'Resolução é obrigatória' }
+  return closeWithResolutionAction(ticketId, resolution, createArticle)
 }

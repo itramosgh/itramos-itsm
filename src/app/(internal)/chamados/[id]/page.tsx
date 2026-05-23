@@ -6,7 +6,7 @@ import { InteractionForm } from '@/components/tickets/InteractionForm'
 import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
 import { ApprovalDialog } from '@/components/tickets/ApprovalDialog'
 import { ReopenDialog } from '@/components/tickets/ReopenDialog'
-import { changeStatusAction } from '../actions'
+import { changeStatusAction, closeTicketFormAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -150,6 +150,27 @@ export default async function TicketDetailPage({
           analystName={(currentProfile?.data as any)?.full_name ?? ''}
           templates={(templates ?? []) as Parameters<typeof InteractionForm>[0]['templates']}
         />
+      )}
+
+      {/* Fechar com resolução */}
+      {(ticket.status === 'resolvido' || ticket.status === 'em_andamento') && (
+        <div className="border rounded-md p-4 space-y-3">
+          <p className="text-sm font-medium">Fechar chamado</p>
+          <form action={closeTicketFormAction.bind(null, id) as any} className="space-y-2">
+            <textarea
+              name="resolution"
+              className="w-full border rounded p-2 text-sm"
+              rows={3}
+              placeholder="Descreva a resolução..."
+              required
+            />
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="create_article" name="create_article" />
+              <label htmlFor="create_article" className="text-sm">Salvar na base de conhecimento</label>
+            </div>
+            <Button type="submit" variant="outline" size="sm">Fechar chamado</Button>
+          </form>
+        </div>
       )}
 
       {/* Reabertura */}
