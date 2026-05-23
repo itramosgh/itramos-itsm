@@ -7,10 +7,15 @@ import { Input } from '@/components/ui/input'
 export default async function ChamadosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; priority?: string }>
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; assigned_to?: string; company_id?: string }>
 }) {
-  const { q, status, priority } = await searchParams
+  const { q, status, priority, assigned_to, company_id } = await searchParams
   const supabase = await createClient()
+
+  const [{ data: allAnalysts }, { data: allCompanies }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
+    supabase.from('companies').select('id, name').eq('is_active', true).order('name'),
+  ])
 
   let query = supabase
     .from('tickets')
@@ -20,6 +25,8 @@ export default async function ChamadosPage({
 
   if (status) query = query.eq('status', status as never)
   if (priority) query = query.eq('priority', priority as never)
+  if (assigned_to) query = query.eq('assigned_to', assigned_to)
+  if (company_id) query = query.eq('company_id', company_id)
   if (q) {
     const numQ = parseInt(q, 10)
     if (!isNaN(numQ)) {
@@ -58,6 +65,18 @@ export default async function ChamadosPage({
           <option value="alta">Alta</option>
           <option value="media">Média</option>
           <option value="baixa">Baixa</option>
+        </select>
+        <select name="assigned_to" defaultValue={assigned_to ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+          <option value="">Todos os analistas</option>
+          {(allAnalysts ?? []).map((a: any) => (
+            <option key={a.id} value={a.id}>{a.full_name}</option>
+          ))}
+        </select>
+        <select name="company_id" defaultValue={company_id ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+          <option value="">Todas as empresas</option>
+          {(allCompanies ?? []).map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
         </select>
         <Button type="submit" variant="outline">Filtrar</Button>
       </form>
