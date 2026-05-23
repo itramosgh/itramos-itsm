@@ -4,6 +4,7 @@ import { addInteractionAction } from '@/app/(internal)/chamados/actions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TemplateSelector } from './TemplateSelector'
+import { AttachmentUpload } from './AttachmentUpload'
 
 interface Template {
   id: string; name: string; category: string | null; body: string
@@ -49,6 +50,7 @@ export function InteractionForm({ ticketId, ticketNumber, contactName, analystNa
         placeholder="Digite sua resposta..."
         required
       />
+      <AttachmentUpload ticketId={ticketId} />
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
       <Button type="submit" disabled={pending}>
         {pending ? 'Enviando...' : 'Enviar'}
