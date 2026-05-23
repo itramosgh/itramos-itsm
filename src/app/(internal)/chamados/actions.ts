@@ -300,3 +300,47 @@ export async function requestApprovalAction(ticketId: string, formData: FormData
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }
 }
+
+export async function reopenTicketAction(ticketId: string, reason: string, reopenedByContactId?: string) {
+  const supabase = await createClient()
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('status, closed_at, number')
+    .eq('id', ticketId)
+    .single<{ status: string; closed_at: string | null; number: number }>()
+
+  if (!ticket) return { error: 'Chamado não encontrado' }
+  if (ticket.status !== 'fechado') return { error: 'Apenas chamados fechados podem ser reabertos' }
+
+  if (!ticket.closed_at) return { error: 'Data de fechamento não registrada' }
+  const closedAt = new Date(ticket.closed_at)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3_600_000)
+  if (closedAt < sevenDaysAgo) {
+    return { error: 'Prazo de reabertura expirado. O chamado foi fechado há mais de 7 dias. Abra um novo chamado.' }
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  await supabase.from('ticket_reopens').insert({
+    ticket_id: ticketId,
+    reopened_by_profile_id: reopenedByContactId ? null : user!.id,
+    reopened_by_contact_id: reopenedByContactId ?? null,
+    reason,
+  } as never)
+
+  await supabase.from('tickets').update({
+    status: 'reaberto',
+    closed_at: null,
+  } as never).eq('id', ticketId)
+
+  await supabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'system',
+    content: `Chamado reaberto. Motivo: ${reason}`,
+    is_system: true,
+  } as never)
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}

@@ -5,6 +5,7 @@ import { SLAIndicator } from '@/components/tickets/SLAIndicator'
 import { InteractionForm } from '@/components/tickets/InteractionForm'
 import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
 import { ApprovalDialog } from '@/components/tickets/ApprovalDialog'
+import { ReopenDialog } from '@/components/tickets/ReopenDialog'
 import { changeStatusAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -149,6 +150,11 @@ export default async function TicketDetailPage({
           analystName={(currentProfile?.data as any)?.full_name ?? ''}
           templates={(templates ?? []) as Parameters<typeof InteractionForm>[0]['templates']}
         />
+      )}
+
+      {/* Reabertura */}
+      {ticket.status === 'fechado' && ticket.closed_at && (
+        <ReopenDialog ticketId={id} closedAt={ticket.closed_at} />
       )}
     </div>
   )
