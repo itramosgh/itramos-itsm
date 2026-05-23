@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { ticketSchema, interactionSchema } from '@/lib/validations/ticket'
+import { ticketSchema, interactionSchema, scheduleSchema } from '@/lib/validations/ticket'
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 
@@ -135,6 +135,40 @@ export async function assignTicketAction(ticketId: string, analystId: string | n
     content: analystId ? 'Chamado atribuído.' : 'Atribuição removida.',
     author_profile_id: user!.id,
   } as never)
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function scheduleTicketAction(ticketId: string, scheduledAt: string) {
+  const parsed = scheduleSchema.safeParse({ scheduled_at: scheduledAt })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('status')
+    .eq('id', ticketId)
+    .single<{ status: string }>()
+
+  if (!ticket) return { error: 'Chamado não encontrado' }
+  if (!isValidTransition(ticket.status as TicketStatus, 'agendado')) {
+    return { error: `Não é possível agendar a partir do status "${ticket.status}"` }
+  }
+
+  await supabase.from('tickets').update({
+    status: 'agendado',
+    scheduled_at: parsed.data.scheduled_at,
+  } as never).eq('id', ticketId)
+
+  await supabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'status_change',
+    content: `Chamado agendado para ${new Date(parsed.data.scheduled_at).toLocaleString('pt-BR')}.`,
+    author_profile_id: user!.id,
+  } as never)
+
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }
 }

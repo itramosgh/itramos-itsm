@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { SLAIndicator } from '@/components/tickets/SLAIndicator'
 import { InteractionForm } from '@/components/tickets/InteractionForm'
+import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
 import { changeStatusAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -97,6 +98,9 @@ export default async function TicketDetailPage({
       {/* Ações de status */}
       {validNextStatuses.length > 0 && ticket.status !== 'fechado' && (
         <div className="flex flex-wrap gap-2">
+          {validNextStatuses.includes('agendado') && (
+            <SchedulingDialog ticketId={id} />
+          )}
           {validNextStatuses.map(s => (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <form key={s} action={changeStatusAction.bind(null, id, s, undefined) as any}>
