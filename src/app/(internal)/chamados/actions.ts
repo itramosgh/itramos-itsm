@@ -6,6 +6,7 @@ import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema 
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
+import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
   const parsed = ticketSchema.safeParse({
@@ -37,6 +38,38 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
     content: 'Chamado aberto.',
     is_system: true,
   } as never)
+
+  // Calcular SLA se o chamado tiver contrato com regra de SLA
+  if (parsed.data.contract_id) {
+    const [{ data: slaRule }, { data: contract }, { data: settings }, { data: holidays }] = await Promise.all([
+      supabase.from('contract_sla_rules')
+        .select('response_hours')
+        .eq('contract_id', parsed.data.contract_id)
+        .eq('priority', parsed.data.priority)
+        .single(),
+      supabase.from('contracts').select('is_24x7').eq('id', parsed.data.contract_id).single(),
+      supabase.from('platform_settings').select('business_hours_start, business_hours_end, business_hours_days').single(),
+      supabase.from('holidays').select('date').gte('date', new Date().toISOString().slice(0, 10)),
+    ])
+
+    if (slaRule && contract && settings) {
+      const businessSettings: BusinessHoursSettings = {
+        start: (settings as any).business_hours_start,
+        end: (settings as any).business_hours_end,
+        days: (settings as any).business_hours_days,
+      }
+      const holidayDates = (holidays ?? []).map((h: any) => h.date)
+      const deadline = calculateDeadline({
+        createdAt: new Date(),
+        responseHours: (slaRule as any).response_hours,
+        is24x7: (contract as any).is_24x7,
+        settings: businessSettings,
+        holidays: holidayDates,
+      })
+
+      await supabase.from('tickets').update({ sla_deadline: deadline.toISOString() } as never).eq('id', ticket!.id)
+    }
+  }
 
   redirect(`/chamados/${ticket!.id}`)
 }
