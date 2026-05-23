@@ -1,10 +1,11 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import { ticketSchema, interactionSchema, scheduleSchema } from '@/lib/validations/ticket'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema } from '@/lib/validations/ticket'
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
+import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
   const parsed = ticketSchema.safeParse({
@@ -168,6 +169,100 @@ export async function scheduleTicketAction(ticketId: string, scheduledAt: string
     content: `Chamado agendado para ${new Date(parsed.data.scheduled_at).toLocaleString('pt-BR')}.`,
     author_profile_id: user!.id,
   } as never)
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function requestApprovalAction(ticketId: string, formData: FormData) {
+  const parsed = approvalRequestSchema.safeParse({
+    approver_email: formData.get('approver_email'),
+    approver_contact_id: formData.get('approver_contact_id') || undefined,
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const serviceSupabase = await createServiceClient()
+
+  const { data: ticketRaw } = await supabase
+    .from('tickets')
+    .select('number, title, status, contact_id, channel, contacts(email, full_name)')
+    .eq('id', ticketId)
+    .single()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ticket = ticketRaw as any
+
+  if (!ticket) return { error: 'Chamado não encontrado' }
+  if (['zabbix', 'azure_monitor', 'url_monitoring'].includes(ticket.channel)) {
+    return { error: 'Chamados de monitoramento não passam por aprovação' }
+  }
+  if (!isValidTransition(ticket.status as TicketStatus, 'aguardando_aprovacao')) {
+    return { error: `Não é possível solicitar aprovação a partir do status "${ticket.status}"` }
+  }
+
+  const contactEmail = ticket.contacts?.email
+  const contactName = ticket.contacts?.full_name
+
+  // Auto-aprovação quando aprovador = solicitante
+  if (parsed.data.approver_email === contactEmail) {
+    await serviceSupabase.from('ticket_approvals').insert({
+      ticket_id: ticketId,
+      approver_email: parsed.data.approver_email,
+      approver_contact_id: parsed.data.approver_contact_id ?? null,
+      previous_status: ticket.status,
+      status: 'automatico',
+      responded_at: new Date().toISOString(),
+    } as never)
+    await supabase.from('tickets').update({ status: 'em_andamento' } as never).eq('id', ticketId)
+    await supabase.from('ticket_interactions').insert({
+      ticket_id: ticketId,
+      type: 'system',
+      content: 'Aprovado automaticamente — solicitante e aprovador são a mesma pessoa.',
+      is_system: true,
+    } as never)
+    revalidatePath(`/chamados/${ticketId}`)
+    return { success: true, autoApproved: true }
+  }
+
+  const { data: approval } = await serviceSupabase.from('ticket_approvals').insert({
+    ticket_id: ticketId,
+    approver_email: parsed.data.approver_email,
+    approver_contact_id: parsed.data.approver_contact_id ?? null,
+    previous_status: ticket.status,
+    status: 'pendente',
+  } as never).select('token').single<{ token: string }>()
+
+  if (!approval) return { error: 'Erro ao criar solicitação de aprovação' }
+
+  await supabase.from('tickets').update({ status: 'aguardando_aprovacao' } as never).eq('id', ticketId)
+  await supabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'status_change',
+    content: `Aprovação solicitada para: ${parsed.data.approver_email}`,
+    is_system: true,
+  } as never)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: settingsRaw } = await supabase.from('platform_settings').select('email_from_address, email_from_name').single()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = settingsRaw as any
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const from = buildFromAddress(settings?.email_from_name ?? null, settings?.email_from_address ?? null)
+
+  await sendEmail({
+    to: parsed.data.approver_email,
+    subject: `Aprovação necessária — Chamado #${ticket.number}`,
+    from,
+    html: approvalRequestHtml({
+      ticketNumber: ticket.number,
+      ticketTitle: ticket.title,
+      requesterName: contactName ?? 'Solicitante',
+      approvePath: `/aprovacao/${approval.token}?action=aprovar`,
+      rejectPath: `/aprovacao/${approval.token}?action=reprovar`,
+      appUrl,
+    }),
+  })
 
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }

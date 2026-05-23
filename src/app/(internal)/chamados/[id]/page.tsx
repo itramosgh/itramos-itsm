@@ -4,6 +4,7 @@ import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { SLAIndicator } from '@/components/tickets/SLAIndicator'
 import { InteractionForm } from '@/components/tickets/InteractionForm'
 import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
+import { ApprovalDialog } from '@/components/tickets/ApprovalDialog'
 import { changeStatusAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -41,6 +42,10 @@ export default async function TicketDetailPage({
   const interactions = interactionsRaw as any[]
 
   if (!ticket) notFound()
+
+  const { data: companyContacts } = ticket
+    ? await supabase.from('contacts').select('id, full_name, email').eq('company_id', ticket.company_id).eq('is_active', true).order('full_name')
+    : { data: [] }
 
   const currentProfile = user
     ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
@@ -100,6 +105,9 @@ export default async function TicketDetailPage({
         <div className="flex flex-wrap gap-2">
           {validNextStatuses.includes('agendado') && (
             <SchedulingDialog ticketId={id} />
+          )}
+          {validNextStatuses.includes('aguardando_aprovacao') && (
+            <ApprovalDialog ticketId={id} contacts={(companyContacts ?? []) as { id: string; full_name: string; email: string }[]} />
           )}
           {validNextStatuses.map(s => (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
