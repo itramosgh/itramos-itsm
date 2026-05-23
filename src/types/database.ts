@@ -7,6 +7,19 @@ export type SLAPriority = 'critica' | 'alta' | 'media' | 'baixa'
 export type LogCategory = 'email_sent' | 'email_received' | 'webhook_received' | 'url_monitoring' | 'cron_job' | 'approval' | 'auth'
 export type LogStatus = 'success' | 'failure'
 
+export type TicketStatus =
+  | 'aberto' | 'agendado' | 'em_andamento' | 'aguardando_cliente'
+  | 'aguardando_fornecedor' | 'aguardando_aprovacao' | 'em_mudanca'
+  | 'resolvido' | 'fechado' | 'reaberto'
+
+export type TicketPriority = 'critica' | 'alta' | 'media' | 'baixa'
+
+export type TicketChannel = 'portal' | 'email' | 'zabbix' | 'azure_monitor' | 'url_monitoring'
+
+export type InteractionType = 'mensagem' | 'status_change' | 'assignment' | 'system'
+
+export type ApprovalStatus = 'pendente' | 'aprovado' | 'reprovado' | 'expirado' | 'automatico'
+
 export interface Database {
   public: {
     Tables: {
@@ -94,10 +107,118 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['contract_sla_rules']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['contract_sla_rules']['Insert']>
       }
+      ticket_categories: {
+        Row: {
+          id: string; name: string; slug: string
+          requires_approval: boolean; is_active: boolean
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_categories']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['ticket_categories']['Insert']>
+      }
+      holidays: {
+        Row: {
+          id: string; date: string; name: string
+          is_national: boolean; municipality: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['holidays']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['holidays']['Insert']>
+      }
+      tickets: {
+        Row: {
+          id: string; number: number; title: string; description: string | null
+          category_id: string | null; priority: TicketPriority; status: TicketStatus
+          channel: TicketChannel; company_id: string; contact_id: string
+          contract_id: string | null; assigned_to: string | null
+          scheduled_at: string | null; external_alert_id: string | null
+          sla_deadline: string | null; sla_first_response_at: string | null
+          sla_met: boolean | null; sla_breach_minutes: number | null
+          sla_paused_at: string | null; sla_paused_minutes: number
+          billing_status: 'pendente' | 'cobrado' | null
+          resolution: string | null; closed_at: string | null
+          created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tickets']['Row'], 'id' | 'number' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['tickets']['Insert']>
+      }
+      ticket_interactions: {
+        Row: {
+          id: string; ticket_id: string; type: InteractionType
+          content: string | null; author_profile_id: string | null
+          author_contact_id: string | null; is_system: boolean; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_interactions']['Row'], 'id' | 'created_at'>
+        Update: never
+      }
+      ticket_attachments: {
+        Row: {
+          id: string; ticket_id: string; interaction_id: string | null
+          filename: string; storage_path: string; size_bytes: number | null
+          mime_type: string | null; is_deleted: boolean; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_attachments']['Row'], 'id' | 'created_at'>
+        Update: Pick<Database['public']['Tables']['ticket_attachments']['Row'], 'is_deleted'>
+      }
+      ticket_reopens: {
+        Row: {
+          id: string; ticket_id: string
+          reopened_by_profile_id: string | null; reopened_by_contact_id: string | null
+          reason: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_reopens']['Row'], 'id' | 'created_at'>
+        Update: never
+      }
+      ticket_approvals: {
+        Row: {
+          id: string; ticket_id: string; approver_contact_id: string | null
+          approver_email: string; token: string; previous_status: string
+          status: ApprovalStatus; response_reason: string | null
+          responded_at: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_approvals']['Row'], 'id' | 'token' | 'created_at'>
+        Update: Partial<Pick<Database['public']['Tables']['ticket_approvals']['Row'], 'status' | 'response_reason' | 'responded_at'>>
+      }
+      response_templates: {
+        Row: {
+          id: string; name: string; category: string | null; body: string
+          variables: { key: string; label: string; auto_filled: boolean }[]
+          is_active: boolean; created_by: string | null; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['response_templates']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['response_templates']['Insert']>
+      }
+      ticket_kb_links: {
+        Row: {
+          id: string; ticket_id: string; kb_article_id: string
+          linked_by: string | null; confirmation_token: string
+          resolution_confirmed: boolean | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_kb_links']['Row'], 'id' | 'confirmation_token' | 'created_at'>
+        Update: Pick<Database['public']['Tables']['ticket_kb_links']['Row'], 'resolution_confirmed'>
+      }
+      kb_articles: {
+        Row: {
+          id: string; title: string; summary: string | null; slug: string | null
+          body: string; category_id: string | null; source_ticket_id: string | null
+          is_active: boolean; created_by: string | null; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['kb_articles']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['kb_articles']['Insert']>
+      }
+      pending_email_tickets: {
+        Row: {
+          id: string; from_email: string; company_id: string
+          original_subject: string; original_body: string
+          reminder_count: number; last_reminder_at: string | null
+          completed_at: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['pending_email_tickets']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['pending_email_tickets']['Insert']>
+      }
     }
     Functions: {
       get_user_role: { Args: Record<never, never>; Returns: string }
       is_internal: { Args: Record<never, never>; Returns: boolean }
+      get_contact_company_id: { Args: Record<never, never>; Returns: string | null }
     }
   }
 }
