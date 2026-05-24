@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Settings, Users, Ticket } from 'lucide-react'
+import { LayoutDashboard, Building2, Settings, Users, Ticket, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/usuarios', label: 'Usuários', icon: Users },
   { href: '/chamados', label: 'Chamados', icon: Ticket },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
+  { href: '/configuracoes/email-templates', label: 'Templates de E-mail', icon: Mail },
 ]
 
 export function Sidebar() {
