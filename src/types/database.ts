@@ -20,6 +20,13 @@ export type InteractionType = 'mensagem' | 'status_change' | 'assignment' | 'sys
 
 export type ApprovalStatus = 'pendente' | 'aprovado' | 'reprovado' | 'expirado' | 'automatico'
 
+export interface EmailTemplateVariable {
+  key: string
+  label: string
+  description: string
+  required: boolean
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -213,6 +220,27 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['pending_email_tickets']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['pending_email_tickets']['Insert']>
+      }
+      email_templates: {
+        Row: {
+          slug: string
+          category: string
+          name: string
+          trigger_description: string
+          subject: string
+          body_rich_text: Json
+          body_html: string
+          default_subject: string
+          default_body_rich_text: Json
+          default_body_html: string
+          available_variables: EmailTemplateVariable[]
+          is_customized: boolean
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: never
+        Update: Pick<Database['public']['Tables']['email_templates']['Row'],
+          'subject' | 'body_rich_text' | 'body_html' | 'is_customized' | 'updated_at' | 'updated_by'>
       }
     }
     Functions: {
