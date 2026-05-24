@@ -34,3 +34,19 @@ export async function deleteHolidayAction(id: string) {
   await supabase.from('holidays').delete().eq('id', id)
   revalidatePath('/configuracoes/feriados')
 }
+
+export async function importHolidaysAction(year?: number) {
+  const targetYear = year ?? new Date().getFullYear()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  const response = await fetch(
+    `${appUrl}/api/cron/holiday-import?year=${targetYear}`,
+    { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }
+  )
+
+  if (!response.ok) return { error: 'Falha ao importar feriados. Tente novamente.' }
+
+  const result = await response.json()
+  revalidatePath('/configuracoes/feriados')
+  return { success: true, imported: result.imported as number, skipped: result.skipped as number }
+}

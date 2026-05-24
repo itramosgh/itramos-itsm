@@ -3,6 +3,7 @@ import { createHolidayAction, deleteHolidayAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ImportHolidaysButton } from './ImportHolidaysButton'
 
 const typeLabels: Record<string, string> = {
   nacional: 'Nacional',
@@ -20,6 +21,7 @@ export default async function FeriadosPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-semibold">Feriados</h1>
+      <ImportHolidaysButton />
 
       <form action={createHolidayAction as any} className="space-y-3 border rounded-md p-4">
         <h2 className="font-medium">Novo feriado</h2>
