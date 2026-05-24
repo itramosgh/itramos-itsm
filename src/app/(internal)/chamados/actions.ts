@@ -149,6 +149,44 @@ export async function addInteractionAction(_prevState: unknown, formData: FormDa
     } as never).eq('id', parsed.data.ticket_id)
   }
 
+  // Notificar solicitante + responsáveis quando analista posta mensagem
+  if (parsed.data.type === 'mensagem') {
+    try {
+      const serviceSupabase = await createServiceClient()
+      const { data: ticketFull } = await supabase
+        .from('tickets')
+        .select('number, title, contact_id, company_id, contacts(full_name)')
+        .eq('id', parsed.data.ticket_id)
+        .single()
+      const tf = ticketFull as any
+      const { data: analystProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user!.id)
+        .single()
+      const { resolveContactEmails } = await import('@/lib/email-notifications')
+      const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+      const contactEmails = await resolveContactEmails(supabase, tf.contact_id, tf.company_id)
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+      if (contactEmails.length > 0) {
+        await sendEmailFromTemplate(
+          'analista_respondeu',
+          contactEmails,
+          {
+            numero_chamado: String(tf.number),
+            titulo_chamado: tf.title,
+            nome_cliente: (tf.contacts as any)?.full_name ?? '',
+            nome_analista: (analystProfile as any)?.full_name ?? '',
+            link_chamado: `${appUrl}/portal/chamados/${parsed.data.ticket_id}`,
+          },
+          { replyTo: `chamado-${tf.number}@reply.itramos.com.br` }
+        )
+      }
+    } catch (e) {
+      console.error('Erro ao enviar notificação analista_respondeu:', e)
+    }
+  }
+
   revalidatePath(`/chamados/${parsed.data.ticket_id}`)
   return { success: true }
 }

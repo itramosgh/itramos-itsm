@@ -47,6 +47,44 @@ async function sendPortalReplyAction(formData: FormData) {
     await supabase.from('tickets').update({ status: 'em_andamento' } as never).eq('id', ticketId)
   }
 
+  // Notificar analista quando cliente responde via portal
+  try {
+    const { data: ticketForNotif } = await supabase
+      .from('tickets')
+      .select('number, title, assigned_to')
+      .eq('id', ticketId)
+      .single()
+    const tn = ticketForNotif as any
+    if (tn.assigned_to) {
+      const { createServiceClient } = await import('@/lib/supabase/server')
+      const serviceSupabase = await createServiceClient()
+      const { resolveAnalystEmail } = await import('@/lib/email-notifications')
+      const analystEmail = await resolveAnalystEmail(serviceSupabase, tn.assigned_to)
+      if (analystEmail) {
+        const { data: contactData } = await supabase
+          .from('contacts')
+          .select('full_name')
+          .eq('id', contact.id)
+          .single()
+        const { data: settingsRaw } = await serviceSupabase
+          .from('platform_settings')
+          .select('email_from_name, email_from_address')
+          .single()
+        const settings = settingsRaw as any
+        const { sendEmail, buildFromAddress } = await import('@/lib/email')
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+        await sendEmail({
+          to: analystEmail,
+          subject: `Retorno do cliente — Chamado #${tn.number}`,
+          from: buildFromAddress(settings?.email_from_name ?? null, settings?.email_from_address ?? null),
+          html: `<p>O cliente <strong>${(contactData as any)?.full_name ?? ''}</strong> respondeu ao chamado <strong>#${tn.number} — ${tn.title}</strong>.</p><p><a href="${appUrl}/chamados/${ticketId}">Abrir chamado</a></p>`,
+        })
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao notificar analista sobre resposta do cliente:', e)
+  }
+
   revalidatePath(`/portal/chamados/${ticketId}`)
 }
 
