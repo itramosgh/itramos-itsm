@@ -40,21 +40,27 @@ export async function sendEmailFromTemplate(
 ): Promise<void> {
   const supabase = await createServiceClient()
 
-  const { data: template, error } = await supabase
+  const { data: templateRow, error } = await supabase
     .from('email_templates')
     .select('subject, body_html')
     .eq('slug', slug)
     .single()
 
-  if (error || !template) {
+  if (error || !templateRow) {
     throw new Error(`Template "${slug}" não encontrado: ${error?.message}`)
   }
 
-  const { data: settings } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const template = templateRow as any
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: settingsRaw } = await supabase
     .from('platform_settings')
     .select('email_from_name, email_from_address, logo_light_url, company_name')
     .eq('id', 1)
     .single()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = settingsRaw as any
 
   const subject = substituteVariables(template.subject, vars)
   const bodyHtml = substituteVariables(template.body_html, vars)
