@@ -7,6 +7,8 @@ export interface SendEmailParams {
   subject: string
   html: string
   from: string
+  replyTo?: string
+  attachments?: Array<{ filename: string; content: Buffer | Uint8Array; contentType?: string }>
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
@@ -15,6 +17,9 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     to: typeof params.to === 'string' ? [params.to] : params.to,
     subject: params.subject,
     html: params.html,
+    ...(params.replyTo ? { reply_to: params.replyTo } : {}),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(params.attachments ? { attachments: params.attachments as any } : {}),
   })
   if (error) throw new Error(`Resend error: ${error.message}`)
 }

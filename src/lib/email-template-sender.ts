@@ -36,7 +36,8 @@ export function wrapEmailHtml(
 export async function sendEmailFromTemplate(
   slug: string,
   to: string | string[],
-  vars: Record<string, string>
+  vars: Record<string, string>,
+  opts?: { replyTo?: string }
 ): Promise<void> {
   const supabase = await createServiceClient()
 
@@ -74,5 +75,6 @@ export async function sendEmailFromTemplate(
     subject,
     html: wrappedHtml,
     from: buildFromAddress(settings?.email_from_name ?? null, settings?.email_from_address ?? null),
+    ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
   })
 }
