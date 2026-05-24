@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   const { data: scheduledTickets } = await supabase
     .from('tickets')
-    .select('id, number, title, scheduled_at, assigned_to, contact_id, contacts(email)')
+    .select('id, number, title, scheduled_at, assigned_to, contact_id, company_id, contacts(email)')
     .eq('status', 'agendado')
     .not('scheduled_at', 'is', null)
 
@@ -38,7 +38,17 @@ export async function GET(request: Request) {
         const { data: au } = await supabase.auth.admin.getUserById(ticket.assigned_to)
         if (au.user?.email) recipients.push(au.user.email)
       }
-      if ((ticket.contacts as any)?.email) recipients.push((ticket.contacts as any).email)
+      const { data: mainContact } = await supabase
+        .from('contacts').select('email').eq('id', ticket.contact_id).single()
+      const { data: extraContacts } = await supabase
+        .from('contacts').select('email')
+        .eq('company_id', ticket.company_id).eq('is_active', true)
+        .neq('id', ticket.contact_id)
+        .or('is_contract_responsible.eq.true,receives_ticket_cc.eq.true')
+      if ((mainContact as any)?.email) recipients.push((mainContact as any).email)
+      for (const c of (extraContacts ?? []) as any[]) {
+        if (c.email && !recipients.includes(c.email)) recipients.push(c.email)
+      }
 
       if (recipients.length > 0) {
         await sendEmail({

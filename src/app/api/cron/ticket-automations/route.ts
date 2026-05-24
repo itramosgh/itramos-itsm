@@ -21,17 +21,28 @@ export async function GET(request: Request) {
   let actions = 0
 
   // ── AGUARDANDO CLIENTE ──────────────────────────────────────────────
+  async function resolveTicketContactEmails(contactId: string, companyId: string): Promise<string[]> {
+    const { data: main } = await supabase.from('contacts').select('email').eq('id', contactId).single()
+    const { data: extras } = await supabase
+      .from('contacts').select('email')
+      .eq('company_id', companyId).eq('is_active', true).neq('id', contactId)
+      .or('is_contract_responsible.eq.true,receives_ticket_cc.eq.true')
+    const emails: string[] = []
+    if ((main as any)?.email) emails.push((main as any).email)
+    for (const c of (extras ?? []) as any[]) {
+      if (c.email && !emails.includes(c.email)) emails.push(c.email)
+    }
+    return emails
+  }
+
   const { data: awaitingClientTickets } = await supabase
     .from('tickets')
-    .select('id, number, title, updated_at, contact_id, contacts(email, full_name), assigned_to')
+    .select('id, number, title, updated_at, contact_id, company_id, contacts(email, full_name), assigned_to')
     .eq('status', 'aguardando_cliente')
 
   for (const ticket of (awaitingClientTickets ?? []) as any[]) {
     const lastUpdate = new Date(ticket.updated_at)
     const hoursSinceUpdate = (now.getTime() - lastUpdate.getTime()) / 3_600_000
-    const contactEmail = (ticket.contacts as any)?.email
-    const contactName = (ticket.contacts as any)?.full_name
-
     if (hoursSinceUpdate >= 48) {
       // Auto-fechar após 2 dias sem resposta
       await supabase.from('tickets').update({
@@ -61,25 +72,28 @@ export async function GET(request: Request) {
       continue
     }
 
-    if (hoursSinceUpdate >= 24 && contactEmail) {
+    if (hoursSinceUpdate >= 24) {
       // Lembrete a cada 24h
-      await sendEmail({
-        to: contactEmail,
-        subject: `Aguardamos seu retorno — Chamado #${ticket.number}`,
-        from,
-        html: awaitingClientReminderHtml({
-          ticketNumber: ticket.number,
-          ticketTitle: ticket.title,
-          portalUrl: appUrl,
-        }),
-      })
+      const contactEmails = await resolveTicketContactEmails(ticket.contact_id, ticket.company_id)
+      if (contactEmails.length > 0) {
+        await sendEmail({
+          to: contactEmails,
+          subject: `Aguardamos seu retorno — Chamado #${ticket.number}`,
+          from,
+          html: awaitingClientReminderHtml({
+            ticketNumber: ticket.number,
+            ticketTitle: ticket.title,
+            portalUrl: appUrl,
+          }),
+        })
 
-      await supabase.from('ticket_interactions').insert({
-        ticket_id: ticket.id,
-        type: 'system',
-        content: 'Lembrete automático de retorno enviado ao solicitante.',
-        is_system: true,
-      } as never)
+        await supabase.from('ticket_interactions').insert({
+          ticket_id: ticket.id,
+          type: 'system',
+          content: 'Lembrete automático de retorno enviado ao solicitante.',
+          is_system: true,
+        } as never)
+      }
       actions++
     }
   }
