@@ -49,10 +49,11 @@ export async function resolveNewTicketNotifyEmails(
     .eq('notify_new_tickets', true)
     .eq('is_active', true)
 
-  const emails: string[] = []
-  for (const p of (profiles ?? []) as any[]) {
-    const { data } = await serviceSupabase.auth.admin.getUserById(p.id)
-    if ((data as any).user?.email) emails.push((data as any).user.email)
-  }
-  return emails
+  if (!profiles?.length) return []
+
+  const profileIds = new Set((profiles as any[]).map((p: any) => p.id))
+  const { data: { users } } = await serviceSupabase.auth.admin.listUsers({ perPage: 1000 })
+  return (users ?? [])
+    .filter((u: any) => profileIds.has(u.id) && u.email)
+    .map((u: any) => u.email as string)
 }

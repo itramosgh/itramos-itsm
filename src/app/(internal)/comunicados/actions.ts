@@ -106,6 +106,14 @@ async function resolveAnnouncementRecipients(
 
 export async function sendAnnouncementAction(id: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!['admin', 'gestor'].includes((profile as any)?.role)) {
+    return { error: 'Sem permissão para enviar comunicados' }
+  }
+
   const serviceSupabase = await createServiceClient()
 
   const { data: ann } = (await supabase.from('announcements').select('*').eq('id', id).single()) as { data: any }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, awaitingClientReminderHtml, buildFromAddress } from '@/lib/email'
+import { resolveContactEmails } from '@/lib/email-notifications'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -21,20 +22,6 @@ export async function GET(request: Request) {
   let actions = 0
 
   // ── AGUARDANDO CLIENTE ──────────────────────────────────────────────
-  async function resolveTicketContactEmails(contactId: string, companyId: string): Promise<string[]> {
-    const { data: main } = await supabase.from('contacts').select('email').eq('id', contactId).single()
-    const { data: extras } = await supabase
-      .from('contacts').select('email')
-      .eq('company_id', companyId).eq('is_active', true).neq('id', contactId)
-      .or('is_contract_responsible.eq.true,receives_ticket_cc.eq.true')
-    const emails: string[] = []
-    if ((main as any)?.email) emails.push((main as any).email)
-    for (const c of (extras ?? []) as any[]) {
-      if (c.email && !emails.includes(c.email)) emails.push(c.email)
-    }
-    return emails
-  }
-
   const { data: awaitingClientTickets } = await supabase
     .from('tickets')
     .select('id, number, title, updated_at, contact_id, company_id, contacts(email, full_name), assigned_to')
@@ -74,7 +61,7 @@ export async function GET(request: Request) {
 
     if (hoursSinceUpdate >= 24) {
       // Lembrete a cada 24h
-      const contactEmails = await resolveTicketContactEmails(ticket.contact_id, ticket.company_id)
+      const contactEmails = await resolveContactEmails(supabase, ticket.contact_id, ticket.company_id)
       if (contactEmails.length > 0) {
         await sendEmail({
           to: contactEmails,

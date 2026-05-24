@@ -567,15 +567,16 @@ export async function closeWithResolutionAction(ticketId: string, resolution: st
 
   const { data: ticket } = await supabase
     .from('tickets')
-    .select('title, description, category_id')
+    .select('title, description, category_id, status')
     .eq('id', ticketId)
-    .single<{ title: string; description: string | null; category_id: string | null }>()
+    .single<{ title: string; description: string | null; category_id: string | null; status: string }>()
 
   if (!ticket) return { error: 'Chamado não encontrado' }
+  const wasAlreadyClosed = ticket.status === 'fechado'
 
   await supabase.from('tickets').update({
     status: 'fechado',
-    closed_at: new Date().toISOString(),
+    closed_at: wasAlreadyClosed ? undefined : new Date().toISOString(),
     resolution,
   } as never).eq('id', ticketId)
 
@@ -600,8 +601,8 @@ export async function closeWithResolutionAction(ticketId: string, resolution: st
     } as never)
   }
 
-  // Notificar contatos sobre fechamento com resolução
-  try {
+  // Notificar contatos sobre fechamento com resolução (apenas se não estava fechado antes — evita email duplo)
+  if (!wasAlreadyClosed) try {
     const { data: ticketFull } = await supabase
       .from('tickets')
       .select('number, contact_id, company_id, contacts(full_name)')

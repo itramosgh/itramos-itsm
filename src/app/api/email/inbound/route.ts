@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, buildFromAddress } from '@/lib/email'
 
@@ -20,16 +21,44 @@ function stripQuotedText(text: string): string {
     .trim()
 }
 
+function verifySvixSignature(rawBody: string, headers: Headers, secret: string): boolean {
+  const svixId = headers.get('svix-id')
+  const svixTimestamp = headers.get('svix-timestamp')
+  const svixSignature = headers.get('svix-signature')
+  if (!svixId || !svixTimestamp || !svixSignature) return false
+
+  const timestamp = parseInt(svixTimestamp, 10)
+  if (isNaN(timestamp) || Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) return false
+
+  const toSign = `${svixId}.${svixTimestamp}.${rawBody}`
+  const secretKey = secret.startsWith('whsec_') ? secret.slice(6) : secret
+  const keyBytes = Buffer.from(secretKey, 'base64')
+  const computed = createHmac('sha256', keyBytes).update(toSign).digest('base64')
+  const computedBuf = Buffer.from(computed)
+
+  for (const part of svixSignature.split(' ')) {
+    const sigValue = part.startsWith('v1,') ? part.slice(3) : part
+    try {
+      const sigBuf = Buffer.from(sigValue, 'base64')
+      if (sigBuf.length === computedBuf.length && timingSafeEqual(computedBuf, sigBuf)) return true
+    } catch { /* length mismatch or invalid base64 */ }
+  }
+  return false
+}
+
 export async function POST(request: Request) {
+  const rawBody = await request.text()
+
   const secret = process.env.RESEND_INBOUND_SECRET
   if (secret) {
-    const signature = request.headers.get('svix-signature')
-    if (!signature) return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+    if (!verifySvixSignature(rawBody, request.headers, secret)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
   }
 
   let payload: { from: string; to: string; subject?: string; text?: string }
   try {
-    payload = await request.json()
+    payload = JSON.parse(rawBody)
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }

@@ -4,7 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Eye } from 'lucide-react'
 import type { EmailTemplateVariable } from '@/types/database'
-import { substituteVariables } from '@/lib/email-template-sender'
+
+function substituteVariables(html: string, vars: Record<string, string>): string {
+  return html.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`)
+}
 
 const FAKE_VALUES: Record<string, string> = {
   numero_chamado: '4217',

@@ -36,6 +36,12 @@ export async function deleteHolidayAction(id: string) {
 }
 
 export async function importHolidaysAction(year?: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!['admin', 'gestor'].includes((profile as any)?.role)) return { error: 'Sem permissão' }
+
   const targetYear = year ?? new Date().getFullYear()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
