@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -29,8 +30,10 @@ interface EmailTemplateEditorProps {
 }
 
 export function EmailTemplateEditor({ template }: EmailTemplateEditorProps) {
+  const router = useRouter()
   const editorRef = useRef<TemplateEditorHandle>(null)
   const [subject, setSubject] = useState(template.subject)
+  const [restoreCount, setRestoreCount] = useState(0)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [missingVarsWarning, setMissingVarsWarning] = useState<string[]>([])
@@ -75,6 +78,8 @@ export function EmailTemplateEditor({ template }: EmailTemplateEditorProps) {
       setSaveError(null)
       setSaveSuccess(false)
       setMissingVarsWarning([])
+      setRestoreCount((c) => c + 1)
+      router.refresh()
     })
   }
 
@@ -134,8 +139,8 @@ export function EmailTemplateEditor({ template }: EmailTemplateEditorProps) {
         <Label>Corpo do e-mail</Label>
         <TemplateEditor
           ref={editorRef}
-          key={template.slug}
-          initialContent={template.body_rich_text}
+          key={`${template.slug}-${restoreCount}`}
+          initialContent={restoreCount === 0 ? template.body_rich_text : template.default_body_rich_text}
         />
       </div>
 
