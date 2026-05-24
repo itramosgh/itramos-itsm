@@ -125,10 +125,40 @@ export interface Database {
       holidays: {
         Row: {
           id: string; date: string; name: string
-          is_national: boolean; municipality: string | null; created_at: string
+          type: 'nacional' | 'municipal' | 'manual'; year: number; created_at: string
         }
         Insert: Omit<Database['public']['Tables']['holidays']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['holidays']['Insert']>
+      }
+      holiday_notice_sent: {
+        Row: { id: string; holiday_id: string; contact_id: string; sent_at: string }
+        Insert: Omit<Database['public']['Tables']['holiday_notice_sent']['Row'], 'id' | 'sent_at'>
+        Update: never
+      }
+      announcements: {
+        Row: {
+          id: string; subject: string; body_rich_text: Json | null; body_html: string | null
+          recipient_type: 'all' | 'company' | 'department' | 'manual'
+          recipient_company_id: string | null; recipient_departments: string[] | null
+          status: 'rascunho' | 'agendado' | 'enviado' | 'cancelado'
+          scheduled_at: string | null; sent_at: string | null; recipient_count: number | null
+          created_by: string; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['announcements']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['announcements']['Insert']>
+      }
+      announcement_recipients: {
+        Row: { id: string; announcement_id: string; contact_id: string }
+        Insert: Omit<Database['public']['Tables']['announcement_recipients']['Row'], 'id'>
+        Update: never
+      }
+      announcement_attachments: {
+        Row: {
+          id: string; announcement_id: string; filename: string; storage_path: string
+          size_bytes: number | null; mime_type: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['announcement_attachments']['Row'], 'id' | 'created_at'>
+        Update: never
       }
       tickets: {
         Row: {

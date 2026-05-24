@@ -6,22 +6,23 @@ import { z } from 'zod'
 const holidaySchema = z.object({
   date: z.string().date('Data inválida'),
   name: z.string().min(1, 'Nome é obrigatório'),
-  is_national: z.boolean().default(true),
-  municipality: z.string().optional(),
+  type: z.enum(['nacional', 'municipal', 'manual']).default('nacional'),
 })
 
 export async function createHolidayAction(formData: FormData) {
   const parsed = holidaySchema.safeParse({
     date: formData.get('date'),
     name: formData.get('name'),
-    is_national: formData.get('is_national') === 'on',
-    municipality: formData.get('municipality') || undefined,
+    type: formData.get('type') ?? 'nacional',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
+  const year = new Date(parsed.data.date + 'T12:00:00').getFullYear()
   const supabase = await createClient()
-  const { error } = await supabase.from('holidays').insert(parsed.data as never)
-  if (error?.code === '23505') return { error: 'Feriado já cadastrado nesta data.' }
+  const { error } = await supabase
+    .from('holidays')
+    .insert({ ...parsed.data, year } as never)
+  if (error?.code === '23505') return { error: 'Feriado já cadastrado nesta data e tipo.' }
   if (error) return { error: error.message }
 
   revalidatePath('/configuracoes/feriados')
