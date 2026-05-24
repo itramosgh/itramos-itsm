@@ -5,7 +5,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema } from '@/lib/validations/ticket'
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
-import { sendEmail, approvalRequestHtml, buildFromAddress, kbLinkHtml } from '@/lib/email'
+import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
 import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
@@ -509,7 +509,7 @@ export async function linkKbArticleAction(ticketId: string, articleId: string) {
 
   const [{ data: article }, { data: ticket }] = await Promise.all([
     supabase.from('kb_articles').select('id, title, summary, slug').eq('id', articleId).single(),
-    supabase.from('tickets').select('number, title, contact_id, contacts(email)').eq('id', ticketId).single(),
+    supabase.from('tickets').select('number, title, contact_id, company_id, contacts(full_name)').eq('id', ticketId).single(),
   ])
 
   if (!article || !ticket) return { error: 'Chamado ou artigo não encontrado' }
@@ -530,27 +530,31 @@ export async function linkKbArticleAction(ticketId: string, articleId: string) {
     is_system: false,
   } as never)
 
-  const contactEmail = ((ticket as any).contacts as any)?.email
-  if (contactEmail) {
-    const { data: settings } = await supabase
-      .from('platform_settings')
-      .select('email_from_address, email_from_name')
-      .single()
-    const from = buildFromAddress((settings as any)?.email_from_name ?? null, (settings as any)?.email_from_address ?? null)
+  // Enviar kb_artigo_vinculado para solicitante + responsáveis via sendEmailFromTemplate
+  try {
+    const tf = ticket as any
+    const art = article as any
+    const { resolveContactEmails } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    const contactEmails = await resolveContactEmails(supabase, tf.contact_id, tf.company_id)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL!
-
-    await sendEmail({
-      to: contactEmail,
-      subject: `Artigo relacionado ao seu chamado #${(ticket as any).number}`,
-      from,
-      html: kbLinkHtml({
-        ticketNumber: (ticket as any).number,
-        articleTitle: (article as any).title,
-        articleSummary: (article as any).summary,
-        confirmUrl: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=true`,
-        denyUrl: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=false`,
-      }),
-    })
+    if (contactEmails.length > 0) {
+      await sendEmailFromTemplate(
+        'kb_artigo_vinculado',
+        contactEmails,
+        {
+          numero_chamado: String(tf.number),
+          nome_cliente: (tf.contacts as any)?.full_name ?? '',
+          titulo_artigo: art.title,
+          resumo_artigo: art.summary ?? '',
+          link_confirmar: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=true`,
+          link_negar: `${appUrl}/api/tickets/kb-confirm?token=${link.confirmation_token}&resolved=false`,
+        },
+        { replyTo: `chamado-${tf.number}@reply.itramos.com.br` }
+      )
+    }
+  } catch (e) {
+    console.error('Erro ao enviar kb_artigo_vinculado:', e)
   }
 
   revalidatePath(`/chamados/${ticketId}`)
