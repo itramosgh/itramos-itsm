@@ -228,6 +228,55 @@ export async function changeStatusAction(ticketId: string, newStatus: TicketStat
     author_profile_id: user!.id,
   } as never)
 
+  // Notificações por e-mail na mudança de status
+  try {
+    const serviceSupabase = await createServiceClient()
+    const { data: ticketFull } = await supabase
+      .from('tickets')
+      .select('number, title, contact_id, company_id, assigned_to, contacts(full_name)')
+      .eq('id', ticketId)
+      .single()
+    const tf = ticketFull as any
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    const { resolveContactEmails, resolveAnalystEmail } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+
+    if (newStatus === 'fechado') {
+      const contactEmails = await resolveContactEmails(supabase, tf.contact_id, tf.company_id)
+      if (contactEmails.length > 0) {
+        await sendEmailFromTemplate('chamado_fechado', contactEmails, {
+          numero_chamado: String(tf.number),
+          titulo_chamado: tf.title,
+          nome_cliente: (tf.contacts as any)?.full_name ?? '',
+          link_chamado: `${appUrl}/portal/chamados/${ticketId}`,
+        }, { replyTo: `chamado-${tf.number}@reply.itramos.com.br` })
+      }
+    } else if (newStatus === 'reaberto') {
+      const analystEmail = await resolveAnalystEmail(serviceSupabase, tf.assigned_to)
+      if (analystEmail) {
+        await sendEmailFromTemplate('chamado_reaberto', analystEmail, {
+          numero_chamado: String(tf.number),
+          titulo_chamado: tf.title,
+          nome_cliente: (tf.contacts as any)?.full_name ?? '',
+          link_chamado: `${appUrl}/chamados/${ticketId}`,
+        })
+      }
+    } else {
+      const contactEmails = await resolveContactEmails(supabase, tf.contact_id, tf.company_id)
+      if (contactEmails.length > 0) {
+        await sendEmailFromTemplate('status_alterado', contactEmails, {
+          numero_chamado: String(tf.number),
+          titulo_chamado: tf.title,
+          nome_cliente: (tf.contacts as any)?.full_name ?? '',
+          novo_status: newStatus,
+          link_chamado: `${appUrl}/portal/chamados/${ticketId}`,
+        }, { replyTo: `chamado-${tf.number}@reply.itramos.com.br` })
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao enviar notificação de status:', e)
+  }
+
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }
 }
@@ -414,6 +463,31 @@ export async function reopenTicketAction(ticketId: string, reason: string, reope
     is_system: true,
   } as never)
 
+  // Notificar analista sobre reabertura
+  try {
+    const serviceSupabase = await createServiceClient()
+    const { data: ticketFull } = await supabase
+      .from('tickets')
+      .select('number, title, assigned_to, contact_id, contacts(full_name)')
+      .eq('id', ticketId)
+      .single()
+    const tf = ticketFull as any
+    const { resolveAnalystEmail } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    const analystEmail = await resolveAnalystEmail(serviceSupabase, tf.assigned_to)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    if (analystEmail) {
+      await sendEmailFromTemplate('chamado_reaberto', analystEmail, {
+        numero_chamado: String(tf.number),
+        titulo_chamado: tf.title,
+        nome_cliente: (tf.contacts as any)?.full_name ?? '',
+        link_chamado: `${appUrl}/chamados/${ticketId}`,
+      })
+    }
+  } catch (e) {
+    console.error('Erro ao enviar notificação chamado_reaberto:', e)
+  }
+
   revalidatePath(`/chamados/${ticketId}`)
   return { success: true }
 }
@@ -520,6 +594,30 @@ export async function closeWithResolutionAction(ticketId: string, resolution: st
       is_active: true,
       created_by: user!.id,
     } as never)
+  }
+
+  // Notificar contatos sobre fechamento com resolução
+  try {
+    const { data: ticketFull } = await supabase
+      .from('tickets')
+      .select('number, contact_id, company_id, contacts(full_name)')
+      .eq('id', ticketId)
+      .single()
+    const tf = ticketFull as any
+    const { resolveContactEmails } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    const contactEmails = await resolveContactEmails(supabase, tf.contact_id, tf.company_id)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    if (contactEmails.length > 0) {
+      await sendEmailFromTemplate('chamado_fechado', contactEmails, {
+        numero_chamado: String(tf.number),
+        titulo_chamado: ticket!.title,
+        nome_cliente: (tf.contacts as any)?.full_name ?? '',
+        link_chamado: `${appUrl}/portal/chamados/${ticketId}`,
+      }, { replyTo: `chamado-${tf.number}@reply.itramos.com.br` })
+    }
+  } catch (e) {
+    console.error('Erro ao enviar notificação chamado_fechado em closeWithResolution:', e)
   }
 
   revalidatePath(`/chamados/${ticketId}`)
