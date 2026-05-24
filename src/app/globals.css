@@ -79,3 +79,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+.template-variable-chip {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: monospace;
+  font-size: 0.85em;
+  border: 1px solid #bfdbfe;
+  cursor: default;
+  white-space: nowrap;
+}
