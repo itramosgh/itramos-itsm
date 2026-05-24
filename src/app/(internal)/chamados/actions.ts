@@ -71,6 +71,41 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
     }
   }
 
+  // Notificar solicitante + responsáveis + gestores com notify_new_tickets
+  try {
+    const serviceSupabase = await createServiceClient()
+    const { data: ticketFull } = await supabase
+      .from('tickets')
+      .select('number, title, priority, contact_id, company_id, contacts(full_name)')
+      .eq('id', ticket!.id)
+      .single()
+    const tf = ticketFull as any
+    const { resolveContactEmails, resolveNewTicketNotifyEmails } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    const [contactEmails, gestorEmails] = await Promise.all([
+      resolveContactEmails(supabase, parsed.data.contact_id, parsed.data.company_id),
+      resolveNewTicketNotifyEmails(serviceSupabase),
+    ])
+    const allEmails = [...new Set([...contactEmails, ...gestorEmails])]
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    if (allEmails.length > 0) {
+      await sendEmailFromTemplate(
+        'chamado_aberto',
+        allEmails,
+        {
+          numero_chamado: String(tf.number),
+          titulo_chamado: tf.title,
+          nome_cliente: (tf.contacts as any)?.full_name ?? '',
+          link_chamado: `${appUrl}/portal/chamados/${ticket!.id}`,
+          prioridade: tf.priority,
+        },
+        { replyTo: `chamado-${tf.number}@reply.itramos.com.br` }
+      )
+    }
+  } catch (e) {
+    console.error('Erro ao enviar notificação chamado_aberto:', e)
+  }
+
   redirect(`/chamados/${ticket!.id}`)
 }
 
