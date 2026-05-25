@@ -7,6 +7,8 @@ import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
 import { ApprovalDialog } from '@/components/tickets/ApprovalDialog'
 import { ReopenDialog } from '@/components/tickets/ReopenDialog'
 import { KbSuggestionApplyButton } from '@/components/tickets/KbSuggestionApplyButton'
+import { PresentialCostPanel } from '@/components/tickets/PresentialCostPanel'
+import { BillingSummary } from '@/components/tickets/BillingSummary'
 import { changeStatusAction, closeTicketFormAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -26,6 +28,8 @@ export default async function TicketDetailPage({
     { data: templates },
     _,
     { data: { user } },
+    { data: linkedGmuds },
+    { data: costData },
   ] = await Promise.all([
     supabase.from('tickets').select(`
       *, companies(name), contacts(full_name, email),
@@ -36,6 +40,13 @@ export default async function TicketDetailPage({
     supabase.from('response_templates').select('*').eq('is_active', true).order('name'),
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
     supabase.auth.getUser(),
+    supabase
+      .from('change_requests')
+      .select('id, title, status, maintenance_start')
+      .eq('origin_ticket_id', id)
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase.from('ticket_costs').select('*').eq('ticket_id', id).maybeSingle(),
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,8 +61,12 @@ export default async function TicketDetailPage({
     : { data: [] }
 
   const currentProfile = user
-    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    ? await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
     : null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profile = (currentProfile?.data as any)
+  const canDiscount = ['admin', 'gestor'].includes(profile?.role)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: kbSuggestions } = ticket
@@ -108,6 +123,40 @@ export default async function TicketDetailPage({
           <p className="text-muted-foreground text-xs mb-1">Descrição</p>
           <p className="whitespace-pre-wrap">{ticket.description}</p>
         </div>
+      )}
+
+      {/* GMUDs vinculadas */}
+      {linkedGmuds && linkedGmuds.length > 0 && (
+        <div className="border rounded-md p-4 space-y-2">
+          <h3 className="text-sm font-medium">Gestão de Mudanças vinculadas</h3>
+          {(linkedGmuds as any[]).map((gmud: any) => (
+            <a
+              key={gmud.id}
+              href={`/mudancas/${gmud.id}`}
+              className="flex items-center justify-between text-sm hover:bg-muted rounded px-2 py-1"
+            >
+              <span>{gmud.title}</span>
+              <span className="text-muted-foreground text-xs">
+                {gmud.status} · {new Date(gmud.maintenance_start).toLocaleDateString('pt-BR')}
+              </span>
+            </a>
+          ))}
+          <a
+            href={`/mudancas/nova?ticket_id=${id}&ticket_title=${encodeURIComponent(ticket.title)}`}
+            className="text-xs text-primary hover:underline block mt-2"
+          >
+            + Criar nova GMUD a partir deste chamado
+          </a>
+        </div>
+      )}
+
+      {linkedGmuds && linkedGmuds.length === 0 && ticket.status !== 'fechado' && (
+        <a
+          href={`/mudancas/nova?ticket_id=${id}&ticket_title=${encodeURIComponent(ticket.title)}`}
+          className="text-xs text-primary hover:underline"
+        >
+          + Criar GMUD a partir deste chamado
+        </a>
       )}
 
       {/* Sugestões da base de conhecimento */}
@@ -169,6 +218,19 @@ export default async function TicketDetailPage({
           )
         })}
       </div>
+
+      {/* Atendimento presencial */}
+      {ticket.status !== 'fechado' && (
+        <PresentialCostPanel ticketId={id} cost={costData as any} canDiscount={canDiscount} />
+      )}
+
+      {/* Resumo de cobrança */}
+      <BillingSummary
+        ticketId={id}
+        billingStatus={ticket.billing_status as any}
+        cost={costData as any}
+        canMarkBilled={canDiscount}
+      />
 
       {/* Formulário de resposta */}
       {ticket.status !== 'fechado' && (

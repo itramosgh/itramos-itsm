@@ -631,5 +631,128 @@ export async function closeTicketFormAction(ticketId: string, formData: FormData
   const resolution = formData.get('resolution') as string
   const createArticle = formData.get('create_article') === 'on'
   if (!resolution?.trim()) return { error: 'Resolução é obrigatória' }
+
+  // Se tem custo calculado, setar billing_status como pendente
+  const supabase = await createClient()
+  const { data: tc } = await supabase
+    .from('ticket_costs').select('total_amount').eq('ticket_id', ticketId).maybeSingle() as { data: any }
+  const extraBillingFields: Record<string, unknown> = {}
+  if (tc?.total_amount > 0) {
+    extraBillingFields.billing_status = 'pendente'
+  }
+  if (Object.keys(extraBillingFields).length > 0) {
+    await supabase.from('tickets').update(extraBillingFields as never).eq('id', ticketId)
+  }
+
   return closeWithResolutionAction(ticketId, resolution, createArticle)
+}
+
+export async function markPresentialAction(
+  ticketId: string,
+  step: 'departure' | 'arrival' | 'completion'
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  const now = new Date().toISOString()
+
+  const { data: existing } = await supabase
+    .from('ticket_costs')
+    .select('id, departure_at, arrival_at')
+    .eq('ticket_id', ticketId)
+    .single() as { data: any }
+
+  if (step === 'departure') {
+    if (existing) {
+      await supabase.from('ticket_costs')
+        .update({ departure_at: now, arrival_at: null, completion_at: null,
+          travel_time_minutes: null, service_time_minutes: null } as never)
+        .eq('ticket_id', ticketId)
+    } else {
+      await supabase.from('ticket_costs')
+        .insert({ ticket_id: ticketId, departure_at: now } as never)
+    }
+    await supabase.from('tickets').update({ status: 'em_deslocamento' } as never).eq('id', ticketId)
+    await supabase.from('ticket_interactions').insert({
+      ticket_id: ticketId, type: 'system',
+      content: 'Analista a caminho para atendimento presencial.', is_system: true,
+    } as never)
+
+  } else if (step === 'arrival') {
+    if (!existing?.departure_at) return { error: 'Marque a saída primeiro' }
+    const travelMinutes = Math.round(
+      (new Date(now).getTime() - new Date(existing.departure_at).getTime()) / 60000
+    )
+    await supabase.from('ticket_costs')
+      .update({ arrival_at: now, travel_time_minutes: travelMinutes } as never)
+      .eq('ticket_id', ticketId)
+
+  } else if (step === 'completion') {
+    if (!existing?.arrival_at) return { error: 'Marque a chegada primeiro' }
+    const serviceMinutes = Math.round(
+      (new Date(now).getTime() - new Date(existing.arrival_at).getTime()) / 60000
+    )
+    await supabase.from('ticket_costs')
+      .update({ completion_at: now, service_time_minutes: serviceMinutes } as never)
+      .eq('ticket_id', ticketId)
+  }
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function updateTicketCostAction(ticketId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { costSchema } = await import('@/lib/validations/change-request')
+  const parsed = costSchema.safeParse({
+    km_traveled: formData.get('km_traveled'),
+    toll_amount: formData.get('toll_amount'),
+    parking_amount: formData.get('parking_amount'),
+    travel_discount_minutes: formData.get('travel_discount_minutes'),
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { data: settings } = await supabase
+    .from('platform_settings').select('hourly_rate, km_rate').single() as { data: any }
+
+  const { data: cost } = await supabase
+    .from('ticket_costs').select('service_time_minutes, travel_discount_minutes')
+    .eq('ticket_id', ticketId).single() as { data: any }
+
+  const hourlyRate = settings?.hourly_rate ?? 0
+  const kmRate = settings?.km_rate ?? 0
+  const serviceMin = cost?.service_time_minutes ?? 0
+  const discount = parsed.data.travel_discount_minutes ?? 0
+  const billableMin = Math.max(0, serviceMin - discount)
+
+  const technicalFee = (billableMin / 60) * hourlyRate
+  const kmFee = (parsed.data.km_traveled ?? 0) * kmRate
+  const total = technicalFee + kmFee + (parsed.data.toll_amount ?? 0) + (parsed.data.parking_amount ?? 0)
+
+  await supabase.from('ticket_costs').update({
+    ...parsed.data,
+    hourly_rate_applied: hourlyRate,
+    km_rate_applied: kmRate,
+    total_amount: Number(total.toFixed(2)),
+  } as never).eq('ticket_id', ticketId)
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
+export async function markBilledAction(ticketId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user.id).single() as { data: any }
+
+  if (!['admin', 'gestor'].includes(profile?.role)) return { error: 'Sem permissão' }
+
+  await supabase.from('tickets').update({ billing_status: 'cobrado' } as never).eq('id', ticketId)
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
 }
