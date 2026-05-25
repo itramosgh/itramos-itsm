@@ -33,6 +33,7 @@ create table public.change_requests (
       'rascunho','aguardando_aprovacao','aprovada',
       'em_execucao','concluida','revertida','reprovada'
     )),
+  constraint chk_maintenance_window check (maintenance_end > maintenance_start),
   execution_started_at timestamptz,
   execution_completed_at timestamptz,
   reversal_reason text,
@@ -89,12 +90,12 @@ create table public.ticket_costs (
   departure_at timestamptz,
   arrival_at timestamptz,
   completion_at timestamptz,
-  travel_time_minutes integer,
-  service_time_minutes integer,
-  travel_discount_minutes integer not null default 0,
-  km_traveled numeric(8,2),
-  toll_amount numeric(10,2) not null default 0,
-  parking_amount numeric(10,2) not null default 0,
+  travel_time_minutes integer check (travel_time_minutes >= 0),
+  service_time_minutes integer check (service_time_minutes >= 0),
+  travel_discount_minutes integer not null default 0 check (travel_discount_minutes >= 0),
+  km_traveled numeric(8,2) check (km_traveled >= 0),
+  toll_amount numeric(10,2) not null default 0 check (toll_amount >= 0),
+  parking_amount numeric(10,2) not null default 0 check (parking_amount >= 0),
   hourly_rate_applied numeric(10,2),
   km_rate_applied numeric(10,2),
   total_amount numeric(10,2),
@@ -106,4 +107,3 @@ create trigger trg_ticket_costs_updated_at
   before update on public.ticket_costs
   for each row execute function public.set_updated_at();
 
-create index idx_ticket_costs_ticket_id on public.ticket_costs(ticket_id);
