@@ -40,10 +40,9 @@ interface Props {
     }>
   }
   companyContacts: Array<{ id: string; full_name: string; email: string }>
-  userRole: string
 }
 
-export function ChangeRequestDetail({ cr, companyContacts, userRole }: Props) {
+export function ChangeRequestDetail({ cr, companyContacts }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [showApprovalForm, setShowApprovalForm] = useState(false)
@@ -129,8 +128,8 @@ export function ChangeRequestDetail({ cr, companyContacts, userRole }: Props) {
             <form
               action={async (fd) => {
                 const result = await submitForApprovalAction(cr.id, fd)
-                if (result?.error) setError(result.error)
-                else setShowApprovalForm(false)
+                if (result?.error) startTransition(() => setError(result.error!))
+                else startTransition(() => setShowApprovalForm(false))
               }}
               className="space-y-3 border rounded-md p-4"
             >
@@ -190,8 +189,8 @@ export function ChangeRequestDetail({ cr, companyContacts, userRole }: Props) {
             <form
               action={async (fd) => {
                 const result = await reverterGmudAction(cr.id, fd)
-                if (result?.error) setError(result.error)
-                else setShowReversalForm(false)
+                if (result?.error) startTransition(() => setError(result.error!))
+                else startTransition(() => setShowReversalForm(false))
               }}
               className="space-y-3 border border-destructive rounded-md p-4"
             >

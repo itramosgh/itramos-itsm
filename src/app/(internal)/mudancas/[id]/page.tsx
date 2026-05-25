@@ -34,7 +34,6 @@ export default async function MudancaDetailPage({ params }: { params: Promise<{ 
     <ChangeRequestDetail
       cr={cr}
       companyContacts={(contacts as any[]) ?? []}
-      userRole={profile?.role ?? 'analista'}
     />
   )
 }

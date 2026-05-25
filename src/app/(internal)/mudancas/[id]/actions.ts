@@ -12,6 +12,9 @@ export async function submitForApprovalAction(changeRequestId: string, formData:
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
   const serviceSupabase = await createServiceClient()
 
   const { data: cr } = await supabase
@@ -60,6 +63,8 @@ export async function submitForApprovalAction(changeRequestId: string, formData:
 
 export async function iniciarExecucaoAction(changeRequestId: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
 
   const { data: cr } = await supabase
     .from('change_requests')
@@ -94,6 +99,9 @@ export async function iniciarExecucaoAction(changeRequestId: string) {
 
 export async function concluirGmudAction(changeRequestId: string, closeOriginTicket: boolean) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
   const serviceSupabase = await createServiceClient()
 
   const { data: cr } = await supabase
@@ -105,10 +113,11 @@ export async function concluirGmudAction(changeRequestId: string, closeOriginTic
   if (!cr || cr.status !== 'em_execucao') return { error: 'GMUD não está em execução' }
 
   const now = new Date().toISOString()
-  await supabase
+  const { error: updateError } = await supabase
     .from('change_requests')
     .update({ status: 'concluida', execution_completed_at: now } as never)
     .eq('id', changeRequestId)
+  if (updateError) return { error: 'Erro ao atualizar GMUD' }
 
   const contacts: string[] = (cr.change_request_contacts ?? []).map((c: any) =>
     c.external_email ?? c.contacts?.email
@@ -149,6 +158,9 @@ export async function reverterGmudAction(changeRequestId: string, formData: Form
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
   const serviceSupabase = await createServiceClient()
 
   const { data: cr } = await supabase
@@ -159,10 +171,11 @@ export async function reverterGmudAction(changeRequestId: string, formData: Form
 
   if (!cr || cr.status !== 'em_execucao') return { error: 'GMUD não está em execução' }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('change_requests')
     .update({ status: 'revertida', reversal_reason: parsed.data.reversal_reason } as never)
     .eq('id', changeRequestId)
+  if (updateError) return { error: 'Erro ao atualizar GMUD' }
 
   const contacts: string[] = (cr.change_request_contacts ?? []).map((c: any) =>
     c.external_email ?? c.contacts?.email
