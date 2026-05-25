@@ -1,16 +1,35 @@
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatDateTime(dateStr: string) {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user!.id)
     .single() as { data: any }
 
+  const now = new Date().toISOString()
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
 
   const role = profile?.role
@@ -37,7 +56,7 @@ export default async function DashboardPage() {
           ? supabase.from('meetings')
               .select('id, title, scheduled_at, companies(name)')
               .eq('status', 'agendada')
-              .gte('scheduled_at', new Date().toISOString())
+              .gte('scheduled_at', now)
               .lte('scheduled_at', nextWeek)
               .in('id', participantMeetingIds)
               .order('scheduled_at')
@@ -46,7 +65,7 @@ export default async function DashboardPage() {
       : supabase.from('meetings')
           .select('id, title, scheduled_at, companies(name)')
           .eq('status', 'agendada')
-          .gte('scheduled_at', new Date().toISOString())
+          .gte('scheduled_at', now)
           .lte('scheduled_at', nextWeek)
           .order('scheduled_at')
           .limit(5),
@@ -55,22 +74,6 @@ export default async function DashboardPage() {
   const tasks = overdueTasks ?? []
   const meetings = upcomingMeetings ?? []
   const isEmpty = tasks.length === 0 && meetings.length === 0
-
-  function formatDate(dateStr: string) {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  }
-
-  function formatDateTime(dateStr: string) {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
 
   return (
     <div className="space-y-8 p-6">
