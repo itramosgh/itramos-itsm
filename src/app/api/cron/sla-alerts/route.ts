@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, slaAlertHtml, buildFromAddress } from '@/lib/email'
+import { notifyTeams } from '@/lib/teams'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -76,6 +77,23 @@ export async function GET(request: Request) {
         }),
       })
       alertsSent++
+    }
+
+    // Teams notification (once per ticket, not per recipient)
+    try {
+      const assignedProfile = ticket.assigned_to
+        ? (await supabase.auth.admin.getUserById(ticket.assigned_to)).data.user
+        : null
+      await notifyTeams(supabase, isBreached ? 'sla_breach' : 'sla_warning', {
+        ticketNumber: String(ticket.number),
+        ticketId: ticket.id,
+        title: ticket.title,
+        timeRemaining: isBreached ? 'SLA violado' : `${Math.round((deadline.getTime() - effectiveNowMs) / 60000)} min`,
+        breachTime: isBreached ? `${Math.round((effectiveNowMs - deadline.getTime()) / 60000)} min` : '',
+        assignedTo: assignedProfile?.email ?? 'Não atribuído',
+      })
+    } catch {
+      // Teams failure doesn't stop SLA alerts
     }
   }
 

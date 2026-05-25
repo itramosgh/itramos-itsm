@@ -7,6 +7,7 @@ import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
 import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
+import { notifyTeams } from '@/lib/teams'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
   const parsed = ticketSchema.safeParse({
@@ -104,6 +105,26 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
     }
   } catch (e) {
     console.error('Erro ao enviar notificação chamado_aberto:', e)
+  }
+
+  // Teams notification
+  try {
+    const serviceSupabase = await createServiceClient()
+    const { data: ticketForTeams } = await supabase
+      .from('tickets')
+      .select('id, number, title, priority, companies(name)')
+      .eq('id', ticket!.id)
+      .single()
+    const ttf = ticketForTeams as any
+    await notifyTeams(serviceSupabase, 'new_ticket', {
+      ticketNumber: String(ttf.number),
+      ticketId: ttf.id,
+      title: ttf.title,
+      priority: ttf.priority,
+      companyName: ttf.companies?.name ?? '',
+    })
+  } catch {
+    // Teams failure doesn't stop ticket creation
   }
 
   redirect(`/chamados/${ticket!.id}`)
@@ -486,6 +507,26 @@ export async function reopenTicketAction(ticketId: string, reason: string, reope
     }
   } catch (e) {
     console.error('Erro ao enviar notificação chamado_reaberto:', e)
+  }
+
+  // Teams notification
+  try {
+    const serviceSupabase = await createServiceClient()
+    const { data: ticketForTeams } = await serviceSupabase
+      .from('tickets')
+      .select('id, number, title, company_id, companies(name)')
+      .eq('id', ticketId)
+      .single()
+    const rtf = ticketForTeams as any
+    await notifyTeams(serviceSupabase, 'ticket_reopened', {
+      ticketNumber: String(rtf.number),
+      ticketId: ticketId,
+      title: rtf.title,
+      companyName: rtf.companies?.name ?? '',
+      reason,
+    })
+  } catch {
+    // Teams failure doesn't stop reopen
   }
 
   revalidatePath(`/chamados/${ticketId}`)
