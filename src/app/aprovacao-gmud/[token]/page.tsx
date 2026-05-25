@@ -67,37 +67,46 @@ export default async function ChangeApprovalPage({ params }: { params: Promise<{
           <div><span className="font-medium">Plano de rollback:</span> {cr.rollback_plan}</div>
         </div>
 
-        <form className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="reason">Motivo (opcional para aprovação, obrigatório para reprovação)</Label>
-            <Textarea id="reason" name="reason" rows={3} placeholder="Descreva o motivo da sua decisão…" />
-          </div>
-          <div className="flex gap-3">
+        <div className="space-y-6">
+          {/* Aprovação */}
+          <form className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="reason_approve">Motivo (opcional)</Label>
+              <Textarea id="reason_approve" name="reason" rows={2} placeholder="Observações sobre a aprovação…" />
+            </div>
             <Button
               type="submit"
-              className="flex-1"
+              className="w-full"
               formAction={async (fd: FormData) => {
                 'use server'
                 await processChangeApprovalAction(token, 'aprovar', fd.get('reason') as string || undefined)
               }}
             >
-              Aprovar
+              Aprovar Mudança
             </Button>
-            <Button
-              type="submit"
-              variant="destructive"
-              className="flex-1"
-              formAction={async (fd: FormData) => {
-                'use server'
-                const reason = fd.get('reason') as string
-                if (!reason?.trim()) return
-                await processChangeApprovalAction(token, 'reprovar', reason)
-              }}
-            >
-              Reprovar
-            </Button>
+          </form>
+
+          <div className="border-t pt-4">
+            {/* Reprovação */}
+            <form className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="reason_reject">Motivo da reprovação <span className="text-destructive">*</span></Label>
+                <Textarea id="reason_reject" name="reason" rows={3} required placeholder="Descreva o motivo da reprovação…" />
+              </div>
+              <Button
+                type="submit"
+                variant="destructive"
+                className="w-full"
+                formAction={async (fd: FormData) => {
+                  'use server'
+                  await processChangeApprovalAction(token, 'reprovar', fd.get('reason') as string)
+                }}
+              >
+                Reprovar Mudança
+              </Button>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

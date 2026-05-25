@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmailFromTemplate } from '@/lib/email-template-sender'
 
@@ -41,17 +42,22 @@ export async function processChangeApprovalAction(
       const { data: profile } = await supabase
         .from('profiles').select('full_name').eq('id', cr.responsible_id).single() as { data: any }
 
-      await sendEmailFromTemplate(slug, authUser.user.email, {
-        analista_nome: profile?.full_name ?? 'Analista',
-        titulo: cr.title,
-        aprovador_email: approval.approver_email,
-        janela_inicio: new Date(cr.maintenance_start).toLocaleString('pt-BR'),
-        janela_fim: new Date(cr.maintenance_end).toLocaleString('pt-BR'),
-        motivo: reason ?? '—',
-        link_gmud: `${appUrl}/mudancas/${approval.change_request_id}`,
-      })
+      try {
+        await sendEmailFromTemplate(slug, authUser.user.email, {
+          analista_nome: profile?.full_name ?? 'Analista',
+          titulo: cr.title,
+          aprovador_email: approval.approver_email,
+          janela_inicio: new Date(cr.maintenance_start).toLocaleString('pt-BR'),
+          janela_fim: new Date(cr.maintenance_end).toLocaleString('pt-BR'),
+          motivo: reason ?? '—',
+          link_gmud: `${appUrl}/mudancas/${approval.change_request_id}`,
+        })
+      } catch {
+        // email failure is non-blocking — approval is already recorded
+      }
     }
   }
 
+  revalidatePath(`/aprovacao-gmud/${token}`)
   return { success: true, approved }
 }
