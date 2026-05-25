@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { isWithinMonitoringWindow, mapZabbixSeverity } from '@/lib/monitoring'
 import { insertLog } from '@/lib/log'
 import { notifyTeams } from '@/lib/teams'
+import { isValidTransition } from '@/lib/ticket-transitions'
 
 interface ZabbixPayload {
   problem_type?: string
@@ -66,24 +67,35 @@ export async function POST(
         .select('id, status')
         .eq('external_alert_id', externalAlertId)
         .not('status', 'in', '("fechado","resolvido")')
-        .single()
+        .maybeSingle()
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const existingTicket = existingTicketRaw as any
       if (existingTicket) {
-        await (supabase.from('tickets') as any).update({
-          status: 'resolvido',
-          resolution: 'Resolvido automaticamente via Zabbix',
-          closed_at: new Date().toISOString(),
-        }).eq('id', existingTicket.id)
+        if (isValidTransition(existingTicket.status, 'resolvido')) {
+          await (supabase.from('tickets') as any).update({
+            status: 'resolvido',
+            resolution: 'Resolvido automaticamente via Zabbix',
+          }).eq('id', existingTicket.id)
 
-        await supabase.from('ticket_interactions').insert({
-          ticket_id: existingTicket.id,
-          type: 'system',
-          content: 'Resolvido automaticamente via Zabbix',
-          is_system: true,
-        } as any)
+          await supabase.from('ticket_interactions').insert({
+            ticket_id: existingTicket.id,
+            type: 'system',
+            content: 'Resolvido automaticamente via Zabbix',
+            is_system: true,
+          } as any)
+        } else {
+          await insertLog(supabase, 'webhook_received', 'success',
+            `Zabbix recovery: status '${existingTicket.status}' não permite transição para resolvido — ignorado`,
+            { ticket_id: existingTicket.id })
+        }
       }
+
+      // Clean up pending alerts for this external event
+      await (supabase.from('pending_monitoring_alerts') as any)
+        .delete()
+        .eq('external_alert_id', externalAlertId)
+        .eq('monitoring_integration_id', integration.id)
     }
     await insertLog(supabase, 'webhook_received', 'success', `Zabbix recovery recebido: ${payload.trigger_name ?? 'sem nome'}`, { external_alert_id: externalAlertId })
     return NextResponse.json({ ok: true, action: 'recovery_processed' })
@@ -103,7 +115,7 @@ export async function POST(
     days: settings?.business_hours_days ?? [1, 2, 3, 4, 5],
   }
 
-  const todayStr = now.toISOString().slice(0, 10)
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now)
   const { data: holidayRows } = await supabase
     .from('holidays')
     .select('date')

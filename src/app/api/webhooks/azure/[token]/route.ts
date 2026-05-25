@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { isWithinMonitoringWindow, mapAzureMonitorSeverity } from '@/lib/monitoring'
 import { insertLog } from '@/lib/log'
 import { notifyTeams } from '@/lib/teams'
+import { isValidTransition } from '@/lib/ticket-transitions'
 
 interface AzurePayload {
   schemaId?: string
@@ -72,19 +73,32 @@ export async function POST(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ticketId = (existingTicket as any).id
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('tickets') as any).update({
-          status: 'resolvido',
-          resolution: 'Resolvido automaticamente via Azure Monitor',
-          closed_at: new Date().toISOString(),
-        }).eq('id', ticketId)
+        const currentStatus = (existingTicket as any).status
+        if (isValidTransition(currentStatus, 'resolvido')) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase.from('tickets') as any).update({
+            status: 'resolvido',
+            resolution: 'Resolvido automaticamente via Azure Monitor',
+          }).eq('id', ticketId)
 
-        await supabase.from('ticket_interactions').insert({
-          ticket_id: ticketId,
-          type: 'system',
-          content: 'Resolvido automaticamente via Azure Monitor',
-          is_system: true,
-        } as any)
+          await supabase.from('ticket_interactions').insert({
+            ticket_id: ticketId,
+            type: 'system',
+            content: 'Resolvido automaticamente via Azure Monitor',
+            is_system: true,
+          } as any)
+        } else {
+          await insertLog(supabase, 'webhook_received', 'success',
+            `Azure Monitor recovery: status '${currentStatus}' não permite transição para resolvido — ignorado`,
+            { ticket_id: ticketId })
+        }
       }
+
+      // Clean up pending alerts for this external event
+      await (supabase.from('pending_monitoring_alerts') as any)
+        .delete()
+        .eq('external_alert_id', externalAlertId)
+        .eq('monitoring_integration_id', (integrationData as any).id)
     }
     await insertLog(supabase, 'webhook_received', 'success', `Azure Monitor recovery: ${payload.data?.context?.name ?? 'sem nome'}`, { external_alert_id: externalAlertId })
     return NextResponse.json({ ok: true, action: 'recovery_processed' })
@@ -105,7 +119,7 @@ export async function POST(
     days: settings?.business_hours_days ?? [1, 2, 3, 4, 5],
   }
 
-  const todayStr = now.toISOString().slice(0, 10)
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now)
   const { data: holidayRows } = await supabase.from('holidays').select('date').eq('date', todayStr)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const holidays = (holidayRows ?? []).map((h: any) => h.date)

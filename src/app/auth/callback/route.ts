@@ -11,8 +11,8 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { data } = await supabase.auth.exchangeCodeForSession(code)
 
-    // Log SSO logins (provider_token present means OAuth flow)
-    if (data?.session?.provider_token) {
+    // Log SSO logins via Azure AD
+    if (data?.session?.user?.app_metadata?.provider === 'azure') {
       try {
         const serviceClient = await createServiceClient()
         await insertLog(

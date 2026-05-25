@@ -2,6 +2,7 @@
 import { loginWithMicrosoftAction } from '@/app/(auth)/login/actions'
 import { Button } from '@/components/ui/button'
 import { useFormStatus } from 'react-dom'
+import { useState } from 'react'
 
 function MicrosoftIcon() {
   return (
@@ -25,13 +26,17 @@ function SubmitButton() {
 }
 
 export function MicrosoftLoginButton() {
+  const [error, setError] = useState<string | null>(null)
+
   async function handleAction(_formData: FormData) {
-    await loginWithMicrosoftAction()
+    const result = await loginWithMicrosoftAction()
+    if (result?.error) setError(result.error)
   }
 
   return (
     <form action={handleAction}>
       <SubmitButton />
+      {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
     </form>
   )
 }

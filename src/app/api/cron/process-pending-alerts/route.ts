@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     days: settings?.business_hours_days ?? [1, 2, 3, 4, 5],
   }
 
-  const todayStr = now.toISOString().slice(0, 10)
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now)
   const { data: holidayRows } = await supabase
     .from('holidays')
     .select('date')

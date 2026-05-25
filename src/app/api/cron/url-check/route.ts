@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { insertLog } from '@/lib/log'
 import { notifyTeams } from '@/lib/teams'
+import { isValidTransition } from '@/lib/ticket-transitions'
 
 async function checkUrl(url: string): Promise<{ status: 'up' | 'down'; httpStatusCode: number | null; responseTimeMs: number | null; errorMessage: string | null }> {
   const controller = new AbortController()
@@ -191,20 +192,25 @@ export async function GET(request: Request) {
           .maybeSingle()
 
         if (openTicket) {
-          await supabase.from('tickets').update({
-            status: 'resolvido',
-            resolution: 'URL voltou a responder normalmente',
-            closed_at: now.toISOString(),
-          } as never).eq('id', ticketId)
+          if (isValidTransition((openTicket as any).status, 'resolvido')) {
+            await supabase.from('tickets').update({
+              status: 'resolvido',
+              resolution: 'URL voltou a responder normalmente',
+            } as never).eq('id', ticketId)
 
-          await supabase.from('ticket_interactions').insert({
-            ticket_id: ticketId,
-            type: 'system',
-            content: 'URL voltou a responder normalmente. Chamado encerrado automaticamente.',
-            is_system: true,
-          } as never)
+            await supabase.from('ticket_interactions').insert({
+              ticket_id: ticketId,
+              type: 'system',
+              content: 'URL voltou a responder normalmente. Chamado encerrado automaticamente.',
+              is_system: true,
+            } as never)
 
-          await insertLog(supabase, 'url_monitoring', 'success', `URL UP: chamado #${(openTicket as any).number} encerrado — ${urlRow.name}`, { url_id: urlRow.id })
+            await insertLog(supabase, 'url_monitoring', 'success', `URL UP: chamado #${(openTicket as any).number} encerrado — ${urlRow.name}`, { url_id: urlRow.id })
+          } else {
+            await insertLog(supabase, 'url_monitoring', 'success',
+              `URL UP: status '${(openTicket as any).status}' não permite transição para resolvido — ignorado`,
+              { url_id: urlRow.id, ticket_id: (openTicket as any).id })
+          }
         }
       }
 

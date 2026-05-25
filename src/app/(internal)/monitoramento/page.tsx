@@ -22,7 +22,7 @@ export default async function MonitoramentoPage() {
       .limit(50),
   ])
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
   const urlIds = (urls ?? []).map((u: any) => u.id)
   const { data: todayHistory } = urlIds.length
     ? await supabase

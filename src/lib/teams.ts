@@ -169,12 +169,15 @@ export async function notifyTeams(
   const card = buildAdaptiveCard(event, data)
 
   await Promise.allSettled(
-    webhooks.map((w: any) =>
-      fetch(w.webhook_url, {
+    webhooks.map((w: any) => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 5000)
+      return fetch(w.webhook_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(card),
-      })
-    )
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer))
+    })
   )
 }
