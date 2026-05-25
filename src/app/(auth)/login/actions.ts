@@ -22,3 +22,18 @@ export async function logoutAction() {
   await supabase.auth.signOut()
   redirect('/login')
 }
+
+export async function loginWithMicrosoftAction() {
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email profile',
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+    },
+  })
+  if (error || !data.url) {
+    return { error: 'Erro ao iniciar login com Microsoft. Tente novamente.' }
+  }
+  redirect(data.url)
+}
