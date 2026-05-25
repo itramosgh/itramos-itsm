@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Settings, Users, Ticket, Mail, Megaphone, BookOpen, CheckSquare, Calendar, GitMerge } from 'lucide-react'
+import { LayoutDashboard, Building2, Settings, Users, Ticket, Mail, Megaphone, BookOpen, CheckSquare, Calendar, GitMerge, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/usuarios', label: 'Usuários', icon: Users },
   { href: '/chamados', label: 'Chamados', icon: Ticket },
   { href: '/mudancas', label: 'Mudanças (GMUD)', icon: GitMerge },
+  { href: '/relatorios/custos', label: 'Relatório de Custos', icon: BarChart2 },
   { href: '/conhecimento', label: 'Base de Conhecimento', icon: BookOpen },
   { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
   { href: '/reunioes', label: 'Reuniões', icon: Calendar },

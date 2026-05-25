@@ -5,6 +5,7 @@ export const companySchema = z.object({
   cnpj: z.string().optional(),
   segment: z.string().optional(),
   address: z.string().optional(),
+  company_type: z.enum(['padrao', 'avulso']).default('padrao'),
 })
 
 export const emailDomainSchema = z.object({
