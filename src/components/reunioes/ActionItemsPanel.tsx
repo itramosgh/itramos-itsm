@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { updateActionItemStatusAction } from '@/app/(internal)/reunioes/actions'
+import { updateActionItemStatusAction, convertActionItemToTaskAction } from '@/app/(internal)/reunioes/actions'
 
 type ActionItem = {
   id: string
@@ -38,6 +38,12 @@ export function ActionItemsPanel({ items, meetingId }: ActionItemsPanelProps) {
             )}
           </div>
           <div className="flex gap-2">
+            {!item.converted_to_task_id && item.responsible_profile_id && (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              <form action={convertActionItemToTaskAction.bind(null, item.id, meetingId) as any}>
+                <Button variant="outline" size="sm" type="submit">Converter em tarefa</Button>
+              </form>
+            )}
             {item.status === 'pendente' && (
               <form action={updateActionItemStatusAction.bind(null, item.id, meetingId, 'concluido')}>
                 <Button variant="ghost" size="sm" type="submit">Concluir</Button>

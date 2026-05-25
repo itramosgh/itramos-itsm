@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ActionItemsPanel } from '@/components/reunioes/ActionItemsPanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { updateMeetingStatusAction } from '../actions'
+import { updateMeetingStatusAction, sendMinutesAction } from '../actions'
 
 export default async function ReuniaoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -77,6 +77,18 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
             <Button type="submit" variant="ghost">Cancelar reunião</Button>
           </form>
         </div>
+      )}
+
+      {meeting.status === 'realizada' && !meeting.minutes_sent_at && (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <form action={sendMinutesAction.bind(null, id) as any}>
+          <Button type="submit">Enviar ata por e-mail</Button>
+        </form>
+      )}
+      {meeting.minutes_sent_at && (
+        <p className="text-sm text-muted-foreground">
+          Ata enviada em {new Date(meeting.minutes_sent_at).toLocaleString('pt-BR')}
+        </p>
       )}
     </div>
   )
