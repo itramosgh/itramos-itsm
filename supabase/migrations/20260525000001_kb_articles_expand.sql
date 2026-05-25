@@ -7,8 +7,17 @@ alter table public.kb_articles
   drop column if exists summary,
   drop column if exists slug;
 
-alter table public.kb_articles
-  rename column source_ticket_id to origin_ticket_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'kb_articles'
+      AND column_name = 'source_ticket_id'
+  ) THEN
+    ALTER TABLE public.kb_articles RENAME COLUMN source_ticket_id TO origin_ticket_id;
+  END IF;
+END $$;
 
 alter table public.kb_articles
   add column problem_description text,
@@ -34,7 +43,9 @@ returns table(
   solution text,
   category_id uuid
 )
-language sql stable security definer as $$
+language sql stable security definer
+set search_path = public
+as $$
   select
     id,
     title,
@@ -59,7 +70,7 @@ language sql stable security definer as $$
 $$;
 
 -- 4. kb_documents: documentos e procedimentos por cliente
-create table public.kb_documents (
+create table if not exists public.kb_documents (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete restrict,
   title text not null,
@@ -77,10 +88,10 @@ create trigger trg_kb_documents_updated_at
   before update on public.kb_documents
   for each row execute function public.set_updated_at();
 
-create index idx_kb_documents_company_id on public.kb_documents(company_id);
+create index if not exists idx_kb_documents_company_id on public.kb_documents(company_id);
 
 -- 5. kb_document_attachments: anexos de documentos
-create table public.kb_document_attachments (
+create table if not exists public.kb_document_attachments (
   id uuid primary key default gen_random_uuid(),
   document_id uuid not null references public.kb_documents(id) on delete cascade,
   filename text not null,
