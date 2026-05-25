@@ -30,6 +30,11 @@ export type RiskLevel = 'baixo' | 'medio' | 'alto'
 
 export type CompanyType = 'padrao' | 'avulso'
 
+export type MonitoringWindowType = '24x7' | 'horario_comercial' | 'personalizado'
+export type OutOfWindowBehavior = 'descartar' | 'aguardar_e_abrir'
+export type UrlCheckStatus = 'up' | 'down'
+export type ConnectorType = 'zabbix' | 'azure_monitor'
+
 export interface EmailTemplateVariable {
   key: string
   label: string
@@ -437,6 +442,62 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['ticket_costs']['Row'],
           'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['ticket_costs']['Insert']>
+      }
+      monitoring_integrations: {
+        Row: {
+          id: string; company_id: string; connector_type: ConnectorType
+          webhook_token: string; window_type: MonitoringWindowType
+          window_custom_days: number[] | null; window_custom_start: string | null
+          window_custom_end: string | null; out_of_window_behavior: OutOfWindowBehavior
+          is_active: boolean; created_by: string | null
+          created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['monitoring_integrations']['Row'], 'id' | 'webhook_token' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['monitoring_integrations']['Insert']>
+      }
+      monitored_urls: {
+        Row: {
+          id: string; company_id: string; url: string; name: string
+          check_interval_minutes: number; last_checked_at: string | null
+          last_status: UrlCheckStatus | null; current_ticket_id: string | null
+          is_active: boolean; created_by: string | null
+          created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['monitored_urls']['Row'], 'id' | 'created_at' | 'updated_at' | 'last_checked_at' | 'last_status' | 'current_ticket_id'>
+        Update: Partial<Database['public']['Tables']['monitored_urls']['Insert']> & {
+          last_checked_at?: string | null; last_status?: UrlCheckStatus | null; current_ticket_id?: string | null
+        }
+      }
+      url_check_history: {
+        Row: {
+          id: string; monitored_url_id: string; checked_at: string
+          status: UrlCheckStatus; http_status_code: number | null
+          response_time_ms: number | null; error_message: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['url_check_history']['Row'], 'id'>
+        Update: never
+      }
+      teams_webhook_configs: {
+        Row: {
+          id: string; name: string; webhook_url: string; is_active: boolean
+          notify_new_tickets: boolean; notify_sla_warning: boolean
+          notify_sla_breach: boolean; notify_url_down: boolean
+          notify_url_up: boolean; notify_monitoring_alert: boolean
+          notify_ticket_reopened: boolean; created_by: string | null
+          created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['teams_webhook_configs']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['teams_webhook_configs']['Insert']>
+      }
+      pending_monitoring_alerts: {
+        Row: {
+          id: string; monitoring_integration_id: string
+          external_alert_id: string | null; alert_title: string
+          alert_description: string | null; priority: SLAPriority
+          raw_payload: Json | null; event_at: string; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['pending_monitoring_alerts']['Row'], 'id' | 'created_at'>
+        Update: never
       }
     }
     Functions: {
