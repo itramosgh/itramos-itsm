@@ -234,12 +234,119 @@ export interface Database {
       }
       kb_articles: {
         Row: {
-          id: string; title: string; summary: string | null; slug: string | null
-          body: string; category_id: string | null; source_ticket_id: string | null
-          is_active: boolean; created_by: string | null; created_at: string; updated_at: string
+          id: string
+          title: string
+          problem_description: string | null
+          solution: string | null
+          tags: string[]
+          category_id: string | null
+          origin_ticket_id: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['kb_articles']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['kb_articles']['Insert']>
+      }
+      kb_documents: {
+        Row: {
+          id: string
+          company_id: string
+          title: string
+          content_rich_text: Json | null
+          content_html: string | null
+          category: string | null
+          published_at: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['kb_documents']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['kb_documents']['Insert']>
+      }
+      kb_document_attachments: {
+        Row: {
+          id: string
+          document_id: string
+          filename: string
+          storage_path: string
+          size_bytes: number | null
+          mime_type: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['kb_document_attachments']['Row'], 'id' | 'created_at'>
+        Update: never
+      }
+      tasks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          company_id: string | null
+          assigned_to: string
+          due_date: string
+          priority: 'alta' | 'media' | 'baixa' | null
+          status: 'pendente' | 'concluida' | 'vencida'
+          reminder_days_before: number
+          is_recurring: boolean
+          recurrence_type: 'diaria' | 'semanal' | 'mensal' | 'anual' | null
+          recurrence_active: boolean
+          parent_task_id: string | null
+          origin_meeting_id: string | null
+          origin_action_item_id: string | null
+          completed_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tasks']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['tasks']['Insert']>
+      }
+      meetings: {
+        Row: {
+          id: string
+          company_id: string
+          title: string
+          scheduled_at: string
+          notes_rich_text: Json | null
+          notes_html: string | null
+          status: 'agendada' | 'realizada' | 'cancelada'
+          minutes_sent_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['meetings']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['meetings']['Insert']>
+      }
+      meeting_participants: {
+        Row: {
+          id: string
+          meeting_id: string
+          profile_id: string | null
+          contact_id: string | null
+          external_email: string | null
+          external_name: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['meeting_participants']['Row'], 'id'>
+        Update: never
+      }
+      meeting_action_items: {
+        Row: {
+          id: string
+          meeting_id: string
+          description: string
+          responsible_profile_id: string | null
+          responsible_contact_id: string | null
+          responsible_external_email: string | null
+          due_date: string | null
+          status: 'pendente' | 'concluido'
+          converted_to_task_id: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['meeting_action_items']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['meeting_action_items']['Insert']>
       }
       pending_email_tickets: {
         Row: {
@@ -277,6 +384,10 @@ export interface Database {
       get_user_role: { Args: Record<never, never>; Returns: string }
       is_internal: { Args: Record<never, never>; Returns: boolean }
       get_contact_company_id: { Args: Record<never, never>; Returns: string | null }
+      search_kb_articles: {
+        Args: { query: string }
+        Returns: { id: string; title: string; problem_description: string | null; solution: string | null; category_id: string | null }[]
+      }
     }
   }
 }
