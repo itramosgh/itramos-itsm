@@ -46,6 +46,7 @@ export default async function CostReportPage({
 
   if (analyst_id) query = query.eq('assigned_to', analyst_id)
   if (company_id) query = query.eq('company_id', company_id)
+  if (type) query = (query as any).eq('companies.company_type', type)
 
   const { data: ticketsRaw } = await query
   const tickets = (ticketsRaw as any[]) ?? []
