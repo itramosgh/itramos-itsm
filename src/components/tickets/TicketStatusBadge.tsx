@@ -5,6 +5,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   aberto: 'Aberto', agendado: 'Agendado', em_andamento: 'Em Andamento',
   aguardando_cliente: 'Aguardando Cliente', aguardando_fornecedor: 'Aguardando Fornecedor',
   aguardando_aprovacao: 'Aguardando Aprovação', em_mudanca: 'Em Mudança',
+  em_deslocamento: 'Em Deslocamento',
   resolvido: 'Resolvido', fechado: 'Fechado', reaberto: 'Reaberto',
 }
 
@@ -12,6 +13,7 @@ const STATUS_VARIANT: Record<TicketStatus, 'default' | 'secondary' | 'destructiv
   aberto: 'default', agendado: 'outline', em_andamento: 'default',
   aguardando_cliente: 'secondary', aguardando_fornecedor: 'secondary',
   aguardando_aprovacao: 'secondary', em_mudanca: 'outline',
+  em_deslocamento: 'outline',
   resolvido: 'outline', fechado: 'secondary', reaberto: 'destructive',
 }
 

@@ -66,6 +66,7 @@ export default async function TicketDetailPage({
     aberto: 'Aberto', agendado: 'Agendado', em_andamento: 'Em Andamento',
     aguardando_cliente: 'Aguardando Cliente', aguardando_fornecedor: 'Aguardando Fornecedor',
     aguardando_aprovacao: 'Aguardando Aprovação', em_mudanca: 'Em Mudança',
+    em_deslocamento: 'Em Deslocamento',
     resolvido: 'Resolvido', fechado: 'Fechado', reaberto: 'Reaberto',
   }
 

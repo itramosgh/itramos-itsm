@@ -10,7 +10,7 @@ export type LogStatus = 'success' | 'failure'
 export type TicketStatus =
   | 'aberto' | 'agendado' | 'em_andamento' | 'aguardando_cliente'
   | 'aguardando_fornecedor' | 'aguardando_aprovacao' | 'em_mudanca'
-  | 'resolvido' | 'fechado' | 'reaberto'
+  | 'em_deslocamento' | 'resolvido' | 'fechado' | 'reaberto'
 
 export type TicketPriority = 'critica' | 'alta' | 'media' | 'baixa'
 
@@ -19,6 +19,16 @@ export type TicketChannel = 'portal' | 'email' | 'zabbix' | 'azure_monitor' | 'u
 export type InteractionType = 'mensagem' | 'status_change' | 'assignment' | 'system'
 
 export type ApprovalStatus = 'pendente' | 'aprovado' | 'reprovado' | 'expirado' | 'automatico'
+
+export type ChangeRequestStatus =
+  | 'rascunho' | 'aguardando_aprovacao' | 'aprovada'
+  | 'em_execucao' | 'concluida' | 'revertida' | 'reprovada'
+
+export type ChangeApprovalStatus = 'pendente' | 'aprovado' | 'reprovado' | 'expirado'
+
+export type RiskLevel = 'baixo' | 'medio' | 'alto'
+
+export type CompanyType = 'padrao' | 'avulso'
 
 export interface EmailTemplateVariable {
   key: string
@@ -378,6 +388,55 @@ export interface Database {
         Insert: never
         Update: Pick<Database['public']['Tables']['email_templates']['Row'],
           'subject' | 'body_rich_text' | 'body_html' | 'is_customized' | 'updated_at' | 'updated_by'>
+      }
+      change_requests: {
+        Row: {
+          id: string; title: string; description: string
+          impacted_systems: string; impacted_users: string
+          maintenance_start: string; maintenance_end: string
+          rollback_plan: string; risk_level: RiskLevel
+          responsible_id: string; origin_ticket_id: string | null
+          status: ChangeRequestStatus
+          execution_started_at: string | null; execution_completed_at: string | null
+          reversal_reason: string | null
+          created_by: string | null; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['change_requests']['Row'],
+          'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['change_requests']['Insert']>
+      }
+      change_request_contacts: {
+        Row: {
+          id: string; change_request_id: string
+          contact_id: string | null; external_email: string | null; external_name: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['change_request_contacts']['Row'], 'id'>
+        Update: never
+      }
+      change_approvals: {
+        Row: {
+          id: string; change_request_id: string
+          approver_contact_id: string | null; approver_email: string
+          token: string; status: ChangeApprovalStatus
+          response_reason: string | null; responded_at: string | null; created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['change_approvals']['Row'],
+          'id' | 'token' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['change_approvals']['Row']>
+      }
+      ticket_costs: {
+        Row: {
+          id: string; ticket_id: string
+          departure_at: string | null; arrival_at: string | null; completion_at: string | null
+          travel_time_minutes: number | null; service_time_minutes: number | null
+          travel_discount_minutes: number
+          km_traveled: number | null; toll_amount: number; parking_amount: number
+          hourly_rate_applied: number | null; km_rate_applied: number | null
+          total_amount: number | null; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_costs']['Row'],
+          'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['ticket_costs']['Insert']>
       }
     }
     Functions: {
