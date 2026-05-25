@@ -6,6 +6,7 @@ import { InteractionForm } from '@/components/tickets/InteractionForm'
 import { SchedulingDialog } from '@/components/tickets/SchedulingDialog'
 import { ApprovalDialog } from '@/components/tickets/ApprovalDialog'
 import { ReopenDialog } from '@/components/tickets/ReopenDialog'
+import { KbSuggestionApplyButton } from '@/components/tickets/KbSuggestionApplyButton'
 import { changeStatusAction, closeTicketFormAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -51,6 +52,13 @@ export default async function TicketDetailPage({
   const currentProfile = user
     ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
     : null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: kbSuggestions } = ticket
+    ? await (supabase as any).rpc('search_kb_articles', {
+        query: `${ticket.title} ${ticket.description ?? ''}`.trim().slice(0, 500)
+      })
+    : { data: [] }
 
   const validNextStatuses = VALID_TRANSITIONS[ticket.status as TicketStatus] ?? []
 
@@ -98,6 +106,26 @@ export default async function TicketDetailPage({
         <div className="border rounded-md p-4 text-sm">
           <p className="text-muted-foreground text-xs mb-1">Descrição</p>
           <p className="whitespace-pre-wrap">{ticket.description}</p>
+        </div>
+      )}
+
+      {/* Sugestões da base de conhecimento */}
+      {kbSuggestions && kbSuggestions.length > 0 && (
+        <div className="rounded-md border border-blue-100 bg-blue-50 p-4 space-y-3">
+          <p className="text-sm font-medium text-blue-800">
+            Artigos sugeridos com base no chamado:
+          </p>
+          {(kbSuggestions as any[]).map((a: any) => (
+            <details key={a.id} className="border rounded bg-white p-3">
+              <summary className="text-sm font-medium cursor-pointer">{a.title}</summary>
+              {a.solution && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm whitespace-pre-wrap text-muted-foreground">{a.solution}</p>
+                  <KbSuggestionApplyButton solution={a.solution} />
+                </div>
+              )}
+            </details>
+          ))}
         </div>
       )}
 
