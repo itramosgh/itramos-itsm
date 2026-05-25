@@ -588,17 +588,15 @@ export async function closeWithResolutionAction(ticketId: string, resolution: st
   } as never)
 
   if (createArticle) {
-    const slug = `${ticket.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
-    await supabase.from('kb_articles').insert({
-      title: ticket.title,
-      summary: resolution.slice(0, 200),
-      slug,
-      body: `${ticket.description ?? ''}\n\n**Resolução:**\n${resolution}`,
-      category_id: ticket.category_id ?? null,
-      source_ticket_id: ticketId,
-      is_active: true,
-      created_by: user!.id,
-    } as never)
+    const { createArticleFromTicketAction } = await import('@/app/(internal)/conhecimento/actions')
+    await createArticleFromTicketAction(
+      ticketId,
+      ticket.title,
+      ticket.description ?? null,
+      resolution,
+      ticket.category_id ?? null,
+      user!.id
+    )
   }
 
   // Notificar contatos sobre fechamento com resolução (apenas se não estava fechado antes — evita email duplo)
