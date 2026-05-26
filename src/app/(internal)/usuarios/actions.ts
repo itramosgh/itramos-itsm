@@ -121,6 +121,49 @@ export async function deleteUserAction(id: string): Promise<{ error?: string } |
   revalidatePath('/usuarios')
 }
 
+export async function resendInviteAction(id: string): Promise<{ error?: string; success?: boolean }> {
+  const callerClient = await createClient()
+  const { data: { user: caller } } = await callerClient.auth.getUser()
+  if (!caller) return { error: 'Não autorizado.' }
+  const { data: callerProfile } = await callerClient.from('profiles').select('role').eq('id', caller.id).single() as { data: any }
+  if (!['admin', 'gestor'].includes(callerProfile?.role)) return { error: 'Permissão insuficiente.' }
+
+  const supabase = await createServiceClient()
+
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id)
+  if (authError || !authUser.user) return { error: 'Usuário não encontrado.' }
+
+  const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', id).single() as { data: any }
+
+  const email = authUser.user.email
+  if (!email) return { error: 'Usuário não possui e-mail cadastrado.' }
+
+  try {
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha` },
+    })
+    if (linkError) throw new Error(`generateLink: ${linkError.message}`)
+    const inviteLink = (linkData as any)?.properties?.action_link
+    if (!inviteLink) throw new Error('Link de convite não gerado.')
+
+    const roleLabels: Record<string, string> = { admin: 'Admin', gestor: 'Gestor', analista: 'Analista' }
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    await sendEmailFromTemplate('usuario_interno_criado', email, {
+      nome_usuario: profile?.full_name ?? email,
+      perfil: roleLabels[profile?.role ?? ''] ?? (profile?.role ?? ''),
+      link_definir_senha: inviteLink,
+      app_url: process.env.NEXT_PUBLIC_APP_URL ?? '',
+    })
+    await insertLog(supabase, 'email_sent', 'success', 'Reenvio de convite de usuário', { email })
+    return { success: true }
+  } catch (err) {
+    await insertLog(supabase, 'email_sent', 'failure', 'Erro ao reenviar convite de usuário', { email, error: String(err) }).catch(() => null)
+    return { error: String(err) }
+  }
+}
+
 export async function deactivateUserAction(id: string): Promise<{ error?: string } | void> {
   // Auth check first
   const callerClient = await createClient()

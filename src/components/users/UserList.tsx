@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateUserAction, deactivateUserAction, deleteUserAction } from '@/app/(internal)/usuarios/actions'
+import { updateUserAction, deactivateUserAction, deleteUserAction, resendInviteAction } from '@/app/(internal)/usuarios/actions'
 import { UserForm } from './UserForm'
 import type { Database } from '@/types/database'
 
@@ -20,12 +20,26 @@ export function UserList({ users }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [inviteSending, setInviteSending] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState<Record<string, boolean>>({})
 
   async function handleDelete(id: string) {
     const result = await deleteUserAction(id)
     if (result?.error) {
       setErrors(prev => ({ ...prev, [id]: result.error! }))
       setConfirmDeleteId(null)
+    }
+  }
+
+  async function handleResendInvite(id: string) {
+    setInviteSending(id)
+    const result = await resendInviteAction(id)
+    setInviteSending(null)
+    if (result?.error) {
+      setErrors(prev => ({ ...prev, [id]: result.error! }))
+    } else {
+      setInviteSent(prev => ({ ...prev, [id]: true }))
+      setTimeout(() => setInviteSent(prev => ({ ...prev, [id]: false })), 3000)
     }
   }
 
@@ -61,6 +75,14 @@ export function UserList({ users }: Props) {
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                   {ROLE_LABELS[user.role ?? ''] ?? user.role}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => handleResendInvite(user.id)}
+                  disabled={inviteSending === user.id}
+                  className="text-sm text-muted-foreground hover:underline disabled:opacity-50"
+                >
+                  {inviteSending === user.id ? 'Enviando...' : inviteSent[user.id] ? '✓ Enviado' : 'Reenviar convite'}
+                </button>
                 <button
                   type="button"
                   onClick={() => setEditingId(user.id)}
