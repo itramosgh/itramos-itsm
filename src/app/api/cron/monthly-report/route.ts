@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       ] = await Promise.all([
         supabase
           .from('tickets')
-          .select('number, title, status, priority, created_at, closed_at, reopen_count, ticket_categories(name), profiles!assigned_to(full_name)')
+          .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, category_id')
           .eq('company_id', company.id)
           .gte('created_at', `${from}T00:00:00Z`)
           .lte('created_at', `${to}T23:59:59Z`)
@@ -100,15 +100,28 @@ export async function GET(request: Request) {
           .lte('created_at', `${to}T23:59:59Z`),
       ]) as [{ data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
 
+      const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
+      const categoryIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.category_id).filter(Boolean))]
+      const [{ data: analysts }, { data: cats }] = await Promise.all([
+        analystIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', analystIds)
+          : Promise.resolve({ data: [] as any[] }),
+        categoryIds.length > 0
+          ? supabase.from('ticket_categories').select('id, name').in('id', categoryIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ])
+      const analystMap: Record<string, string> = Object.fromEntries(((analysts as any[]) ?? []).map((a: any) => [a.id, a.full_name]))
+      const categoryMap: Record<string, string> = Object.fromEntries(((cats as any[]) ?? []).map((c: any) => [c.id, c.name]))
+
       const tickets: ReportTicket[] = (ticketsRaw ?? []).map((t: any) => ({
         number: t.number,
         title: t.title,
-        category: (t.ticket_categories as any)?.name ?? 'Sem categoria',
+        category: categoryMap[t.category_id] ?? 'Sem categoria',
         priority: t.priority,
         status: t.status,
         created_at: t.created_at,
         closed_at: t.closed_at ?? null,
-        analyst_name: (t.profiles as any)?.full_name ?? '—',
+        analyst_name: analystMap[t.assigned_to] ?? '—',
         reopened: (t.reopen_count ?? 0) > 0,
       }))
 

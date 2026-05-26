@@ -24,7 +24,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     supabase.from('platform_settings').select('logo_light_url, email_from_name, email_from_address').single(),
     supabase
       .from('tickets')
-      .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, ticket_categories(name)')
+      .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, category_id')
       .eq('company_id', companyId)
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`)
@@ -57,15 +57,22 @@ async function buildReportData(companyId: string, from: string, to: string) {
   const emailFrom = buildFromAddress((settingsData as any)?.email_from_name ?? null, (settingsData as any)?.email_from_address ?? null)
 
   const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
-  const { data: analysts } = analystIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', analystIds)
-    : { data: [] as any[] }
+  const categoryIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.category_id).filter(Boolean))]
+  const [{ data: analysts }, { data: categories }] = await Promise.all([
+    analystIds.length > 0
+      ? supabase.from('profiles').select('id, full_name').in('id', analystIds)
+      : Promise.resolve({ data: [] as any[] }),
+    categoryIds.length > 0
+      ? supabase.from('ticket_categories').select('id, name').in('id', categoryIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ])
   const analystMap: Record<string, string> = Object.fromEntries(((analysts as any[]) ?? []).map((a: any) => [a.id, a.full_name]))
+  const categoryMap: Record<string, string> = Object.fromEntries(((categories as any[]) ?? []).map((c: any) => [c.id, c.name]))
 
   const tickets: ReportTicket[] = (ticketsRaw ?? []).map((t: any) => ({
     number: t.number,
     title: t.title,
-    category: (t.ticket_categories as any)?.name ?? 'Sem categoria',
+    category: categoryMap[t.category_id] ?? 'Sem categoria',
     priority: t.priority,
     status: t.status,
     created_at: t.created_at,
