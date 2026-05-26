@@ -55,8 +55,8 @@ export async function POST(
 
   await insertLog(supabase, 'webhook_received', 'success', `Zabbix payload recebido (debug)`, { payload })
 
-  // recovery === '1' is the canonical Zabbix indicator via {EVENT.RECOVERY} macro
-  const isRecovery = payload.problem_type === 'RECOVERY' || payload.recovery === '1'
+  // {EVENT.VALUE}: "1" = problem, "0" = recovery/OK — use this instead of {EVENT.RECOVERY} which Zabbix doesn't always expand
+  const isRecovery = payload.problem_type === 'RECOVERY' || payload.recovery === '0'
 
   const externalAlertId = payload.event_id ?? null
 
