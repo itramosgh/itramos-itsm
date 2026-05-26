@@ -53,16 +53,14 @@ export async function GET(request: Request) {
       .order('created_at'),
     supabase
       .from('tickets')
-      .select('channel, closed_at, created_at')
+      .select('channel, status, closed_at, created_at')
       .eq('company_id', companyId)
       .in('channel', ['zabbix', 'azure_monitor', 'url_monitoring'])
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`),
   ]) as any[]
 
-  console.log('[monthly-report] tickets count:', ticketsRaw?.length ?? 0, '| error:', ticketsError?.message ?? 'none', '| monitoring count:', monitoringRaw?.length ?? 0, '| companyId:', companyId, '| range:', from, '-', to)
-
-  const companyName: string = companyData?.name ?? 'Cliente'
+const companyName: string = companyData?.name ?? 'Cliente'
   const logoUrl: string | null = (settingsData as any)?.logo_light_url ?? null
 
   const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
@@ -110,10 +108,13 @@ export async function GET(request: Request) {
     const ch: string = (t as any).channel
     if (!monitoringMap[ch]) monitoringMap[ch] = { total: 0, resolved: 0, totalMs: 0, resolvedCount: 0 }
     monitoringMap[ch].total++
-    if ((t as any).closed_at) {
+    const isResolved = (t as any).status === 'resolvido' || (t as any).status === 'fechado'
+    if (isResolved) {
       monitoringMap[ch].resolved++
-      monitoringMap[ch].totalMs += new Date((t as any).closed_at).getTime() - new Date((t as any).created_at).getTime()
-      monitoringMap[ch].resolvedCount++
+      if ((t as any).closed_at) {
+        monitoringMap[ch].totalMs += new Date((t as any).closed_at).getTime() - new Date((t as any).created_at).getTime()
+        monitoringMap[ch].resolvedCount++
+      }
     }
   }
   const monitoring: ReportMonitoringChannel[] = Object.entries(monitoringMap).map(([channel, d]) => ({

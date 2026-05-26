@@ -93,7 +93,7 @@ export async function GET(request: Request) {
           .order('created_at'),
         supabase
           .from('tickets')
-          .select('channel, closed_at, created_at')
+          .select('channel, status, closed_at, created_at')
           .eq('company_id', company.id)
           .in('channel', ['zabbix', 'azure_monitor', 'url_monitoring'])
           .gte('created_at', `${from}T00:00:00Z`)
@@ -142,10 +142,13 @@ export async function GET(request: Request) {
         const ch: string = (t as any).channel
         if (!monMap[ch]) monMap[ch] = { total: 0, resolved: 0, totalMs: 0, resolvedCount: 0 }
         monMap[ch].total++
-        if ((t as any).closed_at) {
+        const isResolved = (t as any).status === 'resolvido' || (t as any).status === 'fechado'
+        if (isResolved) {
           monMap[ch].resolved++
-          monMap[ch].totalMs += new Date((t as any).closed_at).getTime() - new Date((t as any).created_at).getTime()
-          monMap[ch].resolvedCount++
+          if ((t as any).closed_at) {
+            monMap[ch].totalMs += new Date((t as any).closed_at).getTime() - new Date((t as any).created_at).getTime()
+            monMap[ch].resolvedCount++
+          }
         }
       }
       const monitoring: ReportMonitoringChannel[] = Object.entries(monMap).map(([channel, d]) => ({
