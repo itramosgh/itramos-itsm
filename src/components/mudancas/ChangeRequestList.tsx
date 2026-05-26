@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import type { ChangeRequestStatus, RiskLevel } from '@/types/database'
+import { fmtDateTime } from '@/lib/format-date'
 
 const statusLabel: Record<ChangeRequestStatus, string> = {
   rascunho: 'Rascunho',
@@ -57,8 +58,8 @@ export function ChangeRequestList({ changeRequests }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{cr.title}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Janela: {new Date(cr.maintenance_start).toLocaleString('pt-BR')} →{' '}
-                  {new Date(cr.maintenance_end).toLocaleString('pt-BR')}
+                  Janela: {fmtDateTime(cr.maintenance_start)} →{' '}
+                  {fmtDateTime(cr.maintenance_end)}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Responsável: {cr.profiles?.full_name ?? '—'}

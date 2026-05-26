@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { fmtDate, fmtDateTime } from '@/lib/format-date'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { SLAIndicator } from '@/components/tickets/SLAIndicator'
 import { InteractionForm } from '@/components/tickets/InteractionForm'
@@ -137,7 +138,7 @@ export default async function TicketDetailPage({
             >
               <span>{gmud.title}</span>
               <span className="text-muted-foreground text-xs">
-                {gmud.status} · {new Date(gmud.maintenance_start).toLocaleDateString('pt-BR')}
+                {gmud.status} · {fmtDate(gmud.maintenance_start)}
               </span>
             </a>
           ))}
@@ -210,7 +211,7 @@ export default async function TicketDetailPage({
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-xs">{author}</span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(i.created_at).toLocaleString('pt-BR')}
+                  {fmtDateTime(i.created_at)}
                 </span>
               </div>
               <p className="whitespace-pre-wrap">{i.content}</p>

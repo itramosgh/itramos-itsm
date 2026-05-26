@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
+import { fmtDateTime } from '@/lib/format-date'
 import { ReopenDialog } from '@/components/tickets/ReopenDialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -144,7 +145,7 @@ export default async function PortalTicketDetailPage({
             <div key={i.id} className={`border rounded-md p-3 text-sm ${i.is_system ? 'bg-muted/30 border-dashed' : ''}`}>
               <div className="flex justify-between mb-1">
                 <span className="font-medium text-xs">{author}</span>
-                <span className="text-xs text-muted-foreground">{new Date(i.created_at).toLocaleString('pt-BR')}</span>
+                <span className="text-xs text-muted-foreground">{fmtDateTime(i.created_at)}</span>
               </div>
               <p className="whitespace-pre-wrap">{i.content}</p>
             </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { TicketStatusBadge } from './TicketStatusBadge'
 import { SLAIndicator } from './SLAIndicator'
+import { fmtDate, fmtDateTimeShort } from '@/lib/format-date'
 import type { TicketStatus, TicketPriority } from '@/types/database'
 
 const PRIORITY_LABELS: Record<TicketPriority, string> = {
@@ -39,7 +40,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
                 <Link href={`/chamados/${t.id}`} className="hover:underline font-medium">{t.title}</Link>
                 {t.scheduled_at && (
                   <p className="text-xs text-blue-600 mt-0.5">
-                    📅 Agendado: {new Date(t.scheduled_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                    📅 Agendado: {fmtDateTimeShort(t.scheduled_at)}
                   </p>
                 )}
               </td>
@@ -49,7 +50,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               <td className="p-3">
                 <SLAIndicator createdAt={t.created_at} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
               </td>
-              <td className="p-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
+              <td className="p-3 text-xs text-muted-foreground">{fmtDate(t.created_at)}</td>
             </tr>
           ))}
           {tickets.length === 0 && (

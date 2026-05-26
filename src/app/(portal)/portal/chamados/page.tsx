@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
+import { fmtDate } from '@/lib/format-date'
 import { buttonVariants } from '@/components/ui/button'
 import type { TicketStatus } from '@/types/database'
 
@@ -38,7 +39,7 @@ export default async function PortalChamadosPage() {
                 <div>
                   <p className="font-medium text-sm">#{t.number} — {t.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(t.created_at).toLocaleDateString('pt-BR')}
+                    {fmtDate(t.created_at)}
                   </p>
                 </div>
                 <TicketStatusBadge status={t.status as TicketStatus} />

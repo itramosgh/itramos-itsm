@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { fmtTime, fmtDateTime } from '@/lib/format-date'
 
 function AvailabilityBar({ urlId, history }: { urlId: string; history: any[] }) {
   const urlHistory = history.filter(h => h.monitored_url_id === urlId)
@@ -11,7 +12,7 @@ function AvailabilityBar({ urlId, history }: { urlId: string; history: any[] }) 
         <div
           key={i}
           className={`h-full w-2 rounded-sm ${h.status === 'up' ? 'bg-green-500' : 'bg-red-500'}`}
-          title={`${new Date(h.checked_at).toLocaleTimeString('pt-BR')}: ${h.status.toUpperCase()}`}
+          title={`${fmtTime(h.checked_at)}: ${h.status.toUpperCase()}`}
         />
       ))}
     </div>
@@ -71,7 +72,7 @@ export function MonitoringStatusPanel({
                       {!url.last_status && <Badge variant="outline">Pendente</Badge>}
                       {url.last_checked_at && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(url.last_checked_at).toLocaleTimeString('pt-BR')}
+                          {fmtTime(url.last_checked_at)}
                         </p>
                       )}
                     </div>
@@ -105,7 +106,7 @@ export function MonitoringStatusPanel({
                       {alert.priority}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(alert.created_at).toLocaleString('pt-BR')}
+                      {fmtDateTime(alert.created_at)}
                     </span>
                   </div>
                 </div>
