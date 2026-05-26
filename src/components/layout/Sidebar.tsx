@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, Settings, Users, Ticket, Megaphone,
   BookOpen, CheckSquare, Calendar, GitMerge, BarChart2, Activity,
-  LineChart, Monitor, FileText, ChevronRight, ClipboardList,
+  ChevronRight, ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -44,17 +44,7 @@ const navigation: NavEntry[] = [
       { href: '/usuarios', label: 'Usuários', icon: Users },
     ],
   },
-  {
-    label: 'Relatórios',
-    icon: BarChart2,
-    items: [
-      { href: '/relatorios/operacional', label: 'Dashboard Operacional', icon: LineChart },
-      { href: '/relatorios/mudancas', label: 'Dashboard de Mudanças', icon: GitMerge },
-      { href: '/relatorios/monitoramento', label: 'Dashboard Monitoramento', icon: Monitor },
-      { href: '/relatorios/mensal', label: 'Relatório Mensal', icon: FileText },
-      { href: '/relatorios/custos', label: 'Relatório de Custos', icon: BarChart2 },
-    ],
-  },
+  { href: '/relatorios', label: 'Relatórios', icon: BarChart2 },
   {
     label: 'Conhecimento',
     icon: BookOpen,
