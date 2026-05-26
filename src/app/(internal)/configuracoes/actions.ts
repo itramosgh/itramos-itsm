@@ -1,6 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { platformSettingsSchema } from '@/lib/validations/settings'
 import type { Database } from '@/types/database'
 
@@ -34,10 +35,13 @@ export async function updateSettingsAction(formData: FormData) {
     ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
   }
 
-  const serviceClient = await createServiceClient()
-  const { error } = await serviceClient
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { error } = await adminClient
     .from('platform_settings')
-    .upsert(payload as never)
+    .upsert(payload)
 
   if (error) return { error: `Erro ao salvar: ${error.message}` }
 
