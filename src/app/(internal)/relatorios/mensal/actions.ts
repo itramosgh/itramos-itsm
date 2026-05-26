@@ -21,7 +21,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     { data: monitoringRaw },
   ] = await Promise.all([
     supabase.from('companies').select('name').eq('id', companyId).single(),
-    supabase.from('platform_settings').select('logo_light_url, email_from_name, email_from_address').single(),
+    supabase.from('platform_settings').select('logo_light_url, email_from_name, email_from_address, company_name').single(),
     supabase
       .from('tickets')
       .select('number, title, status, priority, created_at, closed_at, assigned_to, category_id')
@@ -53,6 +53,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
   ]) as [{ data: any }, { data: any }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
 
   const companyName: string = companyData?.name ?? 'Cliente'
+  const providerName: string | null = (settingsData as any)?.company_name ?? null
   const logoUrl: string | null = (settingsData as any)?.logo_light_url ?? null
   const emailFrom = buildFromAddress((settingsData as any)?.email_from_name ?? null, (settingsData as any)?.email_from_address ?? null)
 
@@ -119,7 +120,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     .replace(/^\w/, c => c.toUpperCase())
 
   const pdfBuffer = await renderToBuffer(
-    createElement(MonthlyReportPDF, { companyName, period, logoUrl, tickets, meetings, gmuds, monitoring }) as any
+    createElement(MonthlyReportPDF, { companyName, providerName, period, logoUrl, tickets, meetings, gmuds, monitoring }) as any
   )
 
   return { companyName, period, pdfBuffer, emailFrom, supabase }

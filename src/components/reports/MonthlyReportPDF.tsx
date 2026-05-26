@@ -33,6 +33,7 @@ export interface ReportMonitoringChannel {
 
 export interface MonthlyReportProps {
   companyName: string
+  providerName?: string | null
   period: string
   logoUrl?: string | null
   tickets: ReportTicket[]
@@ -116,8 +117,9 @@ const CHANNEL_LABELS: Record<string, string> = {
 }
 
 export function MonthlyReportPDF({
-  companyName, period, logoUrl, tickets, meetings = [], gmuds = [], monitoring = [],
+  companyName, providerName, period, logoUrl, tickets, meetings = [], gmuds = [], monitoring = [],
 }: MonthlyReportProps) {
+  const provider = providerName || 'ITRAMOS ITSM'
   const resolved = tickets.filter(t => t.status === 'resolvido').length
   const fechado = tickets.filter(t => t.status === 'fechado').length
   const closedTotal = resolved + fechado
@@ -149,7 +151,7 @@ export function MonthlyReportPDF({
         <View style={s.header}>
           {logoUrl
             ? <Image src={logoUrl} style={s.logo} />
-            : <Text style={s.logoPlaceholder}>ITRAMOS</Text>
+            : <Text style={s.logoPlaceholder}>{provider}</Text>
           }
           <View style={s.headerRight}>
             <Text style={s.companyName}>{companyName}</Text>
@@ -235,7 +237,7 @@ export function MonthlyReportPDF({
 
         {/* Rodapé */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>ITRAMOS ITSM — Relatório gerado automaticamente</Text>
+          <Text style={s.footerText}>{provider} — Relatório gerado automaticamente</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
         </View>
       </Page>
@@ -244,7 +246,7 @@ export function MonthlyReportPDF({
       {(meetings.length > 0 || gmuds.length > 0 || monitoring.length > 0) && (
         <Page size="A4" style={s.page}>
           <View style={s.header}>
-            <Text style={s.logoPlaceholder}>ITRAMOS</Text>
+            <Text style={s.logoPlaceholder}>{provider}</Text>
             <View style={s.headerRight}>
               <Text style={s.companyName}>{companyName}</Text>
               <Text style={s.period}>Relatório Mensal — {period}</Text>
@@ -318,7 +320,7 @@ export function MonthlyReportPDF({
           )}
 
           <View style={s.footer} fixed>
-            <Text style={s.footerText}>ITRAMOS ITSM — Relatório gerado automaticamente</Text>
+            <Text style={s.footerText}>{provider} — Relatório gerado automaticamente</Text>
             <Text style={s.footerText} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
           </View>
         </Page>
