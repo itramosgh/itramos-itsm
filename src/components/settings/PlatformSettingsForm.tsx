@@ -54,7 +54,7 @@ export function PlatformSettingsForm({ initialData }: Props) {
       recurrence_window_days: initialData?.recurrence_window_days ?? 30,
       business_hours_start: initialData?.business_hours_start ?? '09:00',
       business_hours_end: initialData?.business_hours_end ?? '18:00',
-      business_hours_days: (initialData?.business_hours_days as number[]) ?? [1, 2, 3, 4, 5],
+      business_hours_days: (initialData?.business_hours_days as number[])?.map(String) as unknown as number[] ?? [1, 2, 3, 4, 5],
       hourly_rate: initialData?.hourly_rate ?? undefined,
       km_rate: initialData?.km_rate ?? undefined,
       billing_alert_days: initialData?.billing_alert_days ?? 7,
