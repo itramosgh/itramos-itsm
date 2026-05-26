@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/lib/supabase/session'
 import { getRedirectForUnauthenticated, getRedirectForRole, isInternalPath, isPortalPath } from '@/lib/auth'
 
 export async function proxy(request: NextRequest) {
