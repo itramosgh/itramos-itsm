@@ -1,51 +1,179 @@
 'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Settings, Users, Ticket, Mail, Megaphone, BookOpen, CheckSquare, Calendar, GitMerge, BarChart2, Activity, LineChart, Monitor, FileText } from 'lucide-react'
+import {
+  LayoutDashboard, Building2, Settings, Users, Ticket, Megaphone,
+  BookOpen, CheckSquare, Calendar, GitMerge, BarChart2, Activity,
+  LineChart, Monitor, FileText, ChevronRight, ClipboardList,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const navItems = [
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ElementType
+}
+
+interface NavGroup {
+  label: string
+  icon: React.ElementType
+  items: NavItem[]
+}
+
+type NavEntry = NavItem | NavGroup
+
+const navigation: NavEntry[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/clientes', label: 'Clientes', icon: Building2 },
-  { href: '/usuarios', label: 'Usuários', icon: Users },
-  { href: '/chamados', label: 'Chamados', icon: Ticket },
-  { href: '/mudancas', label: 'Mudanças (GMUD)', icon: GitMerge },
-  { href: '/monitoramento', label: 'Monitoramento', icon: Activity },
-  { href: '/relatorios/operacional', label: 'Dashboard Operacional', icon: LineChart },
-  { href: '/relatorios/mudancas', label: 'Dashboard de Mudanças', icon: GitMerge },
-  { href: '/relatorios/monitoramento', label: 'Dashboard Monitoramento', icon: Monitor },
-  { href: '/relatorios/mensal', label: 'Relatório Mensal', icon: FileText },
-  { href: '/relatorios/custos', label: 'Relatório de Custos', icon: BarChart2 },
-  { href: '/conhecimento', label: 'Base de Conhecimento', icon: BookOpen },
-  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
-  { href: '/reunioes', label: 'Reuniões', icon: Calendar },
-  { href: '/comunicados', label: 'Comunicados', icon: Megaphone },
+  {
+    label: 'Atendimento',
+    icon: ClipboardList,
+    items: [
+      { href: '/chamados', label: 'Chamados', icon: Ticket },
+      { href: '/mudancas', label: 'Mudanças (GMUD)', icon: GitMerge },
+      { href: '/monitoramento', label: 'Monitoramento', icon: Activity },
+      { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
+      { href: '/reunioes', label: 'Reuniões', icon: Calendar },
+    ],
+  },
+  {
+    label: 'Clientes',
+    icon: Building2,
+    items: [
+      { href: '/clientes', label: 'Clientes', icon: Building2 },
+      { href: '/usuarios', label: 'Usuários', icon: Users },
+    ],
+  },
+  {
+    label: 'Relatórios',
+    icon: BarChart2,
+    items: [
+      { href: '/relatorios/operacional', label: 'Dashboard Operacional', icon: LineChart },
+      { href: '/relatorios/mudancas', label: 'Dashboard de Mudanças', icon: GitMerge },
+      { href: '/relatorios/monitoramento', label: 'Dashboard Monitoramento', icon: Monitor },
+      { href: '/relatorios/mensal', label: 'Relatório Mensal', icon: FileText },
+      { href: '/relatorios/custos', label: 'Relatório de Custos', icon: BarChart2 },
+    ],
+  },
+  {
+    label: 'Conhecimento',
+    icon: BookOpen,
+    items: [
+      { href: '/conhecimento', label: 'Base de Conhecimento', icon: BookOpen },
+      { href: '/comunicados', label: 'Comunicados', icon: Megaphone },
+    ],
+  },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return 'items' in entry
+}
+
+function isActive(href: string, pathname: string) {
+  return pathname === href || pathname.startsWith(href + '/')
+}
+
+function getInitialOpenGroups(pathname: string): Record<string, boolean> {
+  return Object.fromEntries(
+    navigation
+      .filter(isGroup)
+      .map(g => [g.label, g.items.some(i => isActive(i.href, pathname))])
+  )
+}
+
 export function Sidebar() {
   const pathname = usePathname()
+  const [open, setOpen] = useState<Record<string, boolean>>(
+    () => getInitialOpenGroups(pathname)
+  )
+
+  useEffect(() => {
+    setOpen(prev => {
+      const updates: Record<string, boolean> = {}
+      for (const entry of navigation) {
+        if (isGroup(entry) && entry.items.some(i => isActive(i.href, pathname))) {
+          updates[entry.label] = true
+        }
+      }
+      return { ...prev, ...updates }
+    })
+  }, [pathname])
+
+  function toggle(label: string) {
+    setOpen(prev => ({ ...prev, [label]: !prev[label] }))
+  }
+
   return (
     <aside className="w-64 border-r bg-background h-screen flex flex-col">
       <div className="p-4 border-b">
         <span className="font-semibold text-lg">ITRAMOS ITSM</span>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
-              pathname === href || pathname.startsWith(href + '/')
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-muted'
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {navigation.map(entry => {
+          if (!isGroup(entry)) {
+            const { href, label, icon: Icon } = entry
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                  isActive(href, pathname)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
+              </Link>
+            )
+          }
+
+          const { label, icon: Icon, items } = entry
+          const isOpen = open[label] ?? false
+          const groupActive = items.some(i => isActive(i.href, pathname))
+
+          return (
+            <div key={label}>
+              <button
+                type="button"
+                onClick={() => toggle(label)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                  groupActive && !isOpen
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted text-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">{label}</span>
+                <ChevronRight
+                  className={cn('h-3.5 w-3.5 shrink-0 transition-transform duration-200', isOpen && 'rotate-90')}
+                />
+              </button>
+              {isOpen && (
+                <div className="ml-3 mt-0.5 mb-0.5 border-l space-y-0.5 pl-2">
+                  {items.map(({ href, label: itemLabel, icon: ItemIcon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                        isActive(href, pathname)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      )}
+                    >
+                      <ItemIcon className="h-4 w-4 shrink-0" />
+                      {itemLabel}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </nav>
     </aside>
   )
