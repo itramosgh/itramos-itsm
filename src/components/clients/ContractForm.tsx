@@ -16,9 +16,21 @@ interface DeviceType {
   name: string
 }
 
+interface InitialData {
+  start_date?: string | null
+  end_date?: string | null
+  renewal_date?: string | null
+  status?: string | null
+  is_24x7?: boolean | null
+  sla_rules?: { priority: SLAEntry['priority']; response_hours: number }[]
+  devices?: { device_type_id: string; quantity: number }[]
+}
+
 interface Props {
   companyId: string
   deviceTypes: DeviceType[]
+  initialData?: InitialData
+  submitLabel?: string
   onSubmit: (formData: FormData) => Promise<{ error?: string; success?: boolean; contractId?: string } | void>
 }
 
@@ -29,12 +41,21 @@ const SLA_PRIORITIES: { value: SLAEntry['priority']; label: string }[] = [
   { value: 'baixa', label: 'Baixa' },
 ]
 
-export function ContractForm({ companyId, deviceTypes, onSubmit }: Props) {
+export function ContractForm({ companyId, deviceTypes, initialData, submitLabel, onSubmit }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [devices, setDevices] = useState<DeviceEntry[]>([{ device_type_id: '', quantity: 1 }])
+  const [devices, setDevices] = useState<DeviceEntry[]>(
+    initialData?.devices?.length
+      ? initialData.devices
+      : [{ device_type_id: '', quantity: 1 }]
+  )
   const [slaRules, setSlaRules] = useState<SLAEntry[]>(
-    SLA_PRIORITIES.map(p => ({ priority: p.value, response_hours: 8 }))
+    initialData?.sla_rules?.length
+      ? SLA_PRIORITIES.map(p => {
+          const rule = initialData.sla_rules!.find(r => r.priority === p.value)
+          return { priority: p.value, response_hours: rule?.response_hours ?? 8 }
+        })
+      : SLA_PRIORITIES.map(p => ({ priority: p.value, response_hours: 8 }))
   )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -59,21 +80,24 @@ export function ContractForm({ companyId, deviceTypes, onSubmit }: Props) {
         <div>
           <label className="text-sm font-medium">Data de início *</label>
           <input name="start_date" type="date" required
+            defaultValue={initialData?.start_date ?? ''}
             className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="text-sm font-medium">Data de término</label>
           <input name="end_date" type="date"
+            defaultValue={initialData?.end_date ?? ''}
             className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="text-sm font-medium">Data de renovação</label>
           <input name="renewal_date" type="date"
+            defaultValue={initialData?.renewal_date ?? ''}
             className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="text-sm font-medium">Status</label>
-          <select name="status"
+          <select name="status" defaultValue={initialData?.status ?? 'ativo'}
             className="mt-1 block w-full border rounded-md px-3 py-2 text-sm">
             <option value="ativo">Ativo</option>
             <option value="expirado">Expirado</option>
@@ -81,7 +105,7 @@ export function ContractForm({ companyId, deviceTypes, onSubmit }: Props) {
           </select>
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="is_24x7" /> Atendimento 24x7
+          <input type="checkbox" name="is_24x7" defaultChecked={initialData?.is_24x7 ?? false} /> Atendimento 24x7
         </label>
       </div>
 
@@ -155,7 +179,7 @@ export function ContractForm({ companyId, deviceTypes, onSubmit }: Props) {
       {error && <p className="text-sm text-destructive">{error}</p>}
       <button type="submit" disabled={loading}
         className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm disabled:opacity-50">
-        {loading ? 'Salvando...' : 'Criar contrato'}
+        {loading ? 'Salvando...' : (submitLabel ?? 'Criar contrato')}
       </button>
     </form>
   )

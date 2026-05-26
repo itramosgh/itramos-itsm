@@ -34,7 +34,7 @@ export default async function ContratosPage({ params }: { params: Promise<{ id: 
         <h1 className="text-2xl font-semibold">Contratos &mdash; {company.name}</h1>
         <CreateContractDialog companyId={id} deviceTypes={deviceTypes ?? []} />
       </div>
-      <ContractList contracts={contracts as unknown as Parameters<typeof ContractList>[0]['contracts']} companyId={id} />
+      <ContractList contracts={contracts as unknown as Parameters<typeof ContractList>[0]['contracts']} companyId={id} deviceTypes={deviceTypes ?? []} />
     </div>
   )
 }

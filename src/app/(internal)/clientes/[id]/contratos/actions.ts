@@ -42,6 +42,32 @@ export async function createContractAction(companyId: string, formData: FormData
   return { success: true, contractId }
 }
 
+export async function updateContractAction(contractId: string, companyId: string, formData: FormData) {
+  const { error: authError, supabase } = await requireAdminOrGestor()
+  if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }
+
+  const services = formData.getAll('services') as string[]
+  const raw = {
+    ...Object.fromEntries(formData.entries()),
+    company_id: companyId,
+    services,
+    is_24x7: formData.get('is_24x7') === 'on',
+  }
+
+  const parsed = contractSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase
+    .from('contracts')
+    .update(parsed.data as never)
+    .eq('id', contractId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clientes/${companyId}/contratos`)
+  return { success: true, contractId }
+}
+
 export async function upsertSLARulesAction(contractId: string, companyId: string, rulesJson: string) {
   const { error: authError, supabase } = await requireAdminOrGestor()
   if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }

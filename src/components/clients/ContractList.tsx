@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import type { Database } from '@/types/database'
+import { ContractForm } from './ContractForm'
+import { updateContractAction, upsertSLARulesAction, upsertContractDevicesAction } from '@/app/(internal)/clientes/[id]/contratos/actions'
 
 type Contract = Database['public']['Tables']['contracts']['Row'] & {
   contract_sla_rules: Database['public']['Tables']['contract_sla_rules']['Row'][]
@@ -9,9 +11,15 @@ type Contract = Database['public']['Tables']['contracts']['Row'] & {
   })[]
 }
 
+interface DeviceType {
+  id: string
+  name: string
+}
+
 interface Props {
   contracts: Contract[]
   companyId: string
+  deviceTypes: DeviceType[]
 }
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -27,8 +35,30 @@ const SLA_PRIORITY_LABELS: Record<string, string> = {
   baixa: 'Baixa',
 }
 
-export function ContractList({ contracts, companyId: _companyId }: Props) {
+export function ContractList({ contracts, companyId, deviceTypes }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editError, setEditError] = useState('')
+
+  const editingContract = contracts.find(c => c.id === editingId)
+
+  async function handleEdit(formData: FormData) {
+    if (!editingId) return
+    setEditError('')
+    const devicesJson = formData.get('devices_json') as string
+    const slaJson = formData.get('sla_json') as string
+
+    const result = await updateContractAction(editingId, companyId, formData)
+    if (!result?.success) return result
+
+    await Promise.all([
+      slaJson ? upsertSLARulesAction(editingId, companyId, slaJson) : Promise.resolve(),
+      devicesJson ? upsertContractDevicesAction(editingId, companyId, devicesJson) : Promise.resolve(),
+    ])
+
+    setEditingId(null)
+    return result
+  }
 
   return (
     <div className="space-y-3">
@@ -95,11 +125,53 @@ export function ContractList({ contracts, companyId: _companyId }: Props) {
                     </ul>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setEditingId(contract.id) }}
+                  className="border rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+                >
+                  Editar
+                </button>
               </div>
             )}
           </div>
         )
       })}
+
+      {editingId && editingContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg border p-6 w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold">Editar Contrato</h2>
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+            <ContractForm
+              companyId={companyId}
+              deviceTypes={deviceTypes}
+              submitLabel="Salvar alterações"
+              initialData={{
+                start_date: editingContract.start_date,
+                end_date: editingContract.end_date,
+                renewal_date: editingContract.renewal_date,
+                status: editingContract.status,
+                is_24x7: editingContract.is_24x7,
+                sla_rules: editingContract.contract_sla_rules.map(r => ({
+                  priority: r.priority as 'critica' | 'alta' | 'media' | 'baixa',
+                  response_hours: r.response_hours ?? 8,
+                })),
+                devices: editingContract.contract_devices.map(d => ({
+                  device_type_id: d.device_type_id ?? '',
+                  quantity: d.quantity ?? 1,
+                })),
+              }}
+              onSubmit={handleEdit}
+            />
+            <button type="button" onClick={() => setEditingId(null)}
+              className="w-full border rounded-md px-4 py-2 text-sm hover:bg-muted">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
