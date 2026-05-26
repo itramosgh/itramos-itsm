@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateContactAction, updateContactFlagsAction, grantPortalAccessAction } from '@/app/(internal)/clientes/[id]/contatos/actions'
+import { updateContactAction, updateContactFlagsAction, grantPortalAccessAction, deleteContactAction } from '@/app/(internal)/clientes/[id]/contatos/actions'
 import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['contacts']['Row']
@@ -22,6 +22,7 @@ export function ContactList({ contacts, companyId }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<EditValues>({ full_name: '', email: '', phone: '', department: '', is_whatsapp: false })
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   function startEdit(contact: Contact) {
     setEditingId(contact.id)
@@ -57,6 +58,14 @@ export function ContactList({ contacts, companyId }: Props) {
   async function handleGrantAccess(contactId: string) {
     const result = await grantPortalAccessAction(contactId, companyId)
     if (result?.error) setErrors((prev) => ({ ...prev, [contactId]: result.error! }))
+  }
+
+  async function handleDelete(contactId: string) {
+    const result = await deleteContactAction(contactId, companyId)
+    if (result?.error) {
+      setErrors((prev) => ({ ...prev, [contactId]: result.error! }))
+      setConfirmDeleteId(null)
+    }
   }
 
   return (
@@ -144,6 +153,21 @@ export function ContactList({ contacts, companyId }: Props) {
                   <button type="button" onClick={() => handleGrantAccess(contact.id)}
                     className="text-xs border rounded px-2 py-1 hover:bg-muted">
                     Dar acesso ao portal
+                  </button>
+                )}
+                {confirmDeleteId === contact.id ? (
+                  <span className="flex items-center gap-1 text-xs">
+                    <span className="text-destructive font-medium">Remover?</span>
+                    <button type="button" onClick={() => handleDelete(contact.id)}
+                      className="text-destructive font-medium hover:underline">Sim</button>
+                    <span className="text-muted-foreground">/</span>
+                    <button type="button" onClick={() => setConfirmDeleteId(null)}
+                      className="hover:underline">Não</button>
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDeleteId(contact.id)}
+                    className="text-xs border rounded px-2 py-1 text-destructive hover:bg-destructive/10">
+                    Remover
                   </button>
                 )}
               </div>

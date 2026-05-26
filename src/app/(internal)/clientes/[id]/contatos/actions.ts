@@ -72,6 +72,32 @@ export async function updateContactFlagsAction(
   return { success: true }
 }
 
+export async function deleteContactAction(contactId: string, companyId: string) {
+  const { error: authError, supabase } = await requireAdminOrGestor()
+  if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }
+
+  // If contact has portal access, delete the auth user first
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('user_id')
+    .eq('id', contactId)
+    .single() as { data: { user_id: string | null } | null; error: unknown }
+
+  if (contact?.user_id) {
+    const serviceSupabase = await createServiceClient()
+    await serviceSupabase.auth.admin.deleteUser(contact.user_id)
+  }
+
+  const { error } = await supabase.from('contacts').delete().eq('id', contactId)
+  if (error) {
+    if (error.code === '23503') return { error: 'Contato possui chamados vinculados e não pode ser removido. Desative-o.' }
+    return { error: error.message }
+  }
+
+  revalidatePath(`/clientes/${companyId}/contatos`)
+  return { success: true }
+}
+
 export async function grantPortalAccessAction(contactId: string, companyId: string) {
   const { error: authError, supabase: callerClient } = await requireAdminOrGestor()
   if (authError || !callerClient) return { error: authError ?? 'Não autorizado.' }
