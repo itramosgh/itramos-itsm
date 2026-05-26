@@ -11,7 +11,8 @@ export default async function PlataformaPage() {
     adminClient.from('platform_settings').select('*').single(),
     adminClient
       .from('contacts')
-      .select('id, full_name, email, companies(name)')
+      .select('id, full_name, email')
+      .is('company_id', null)
       .eq('is_active', true)
       .order('full_name'),
   ])

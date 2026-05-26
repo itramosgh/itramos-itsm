@@ -96,7 +96,7 @@ export interface Database {
       }
       contacts: {
         Row: {
-          id: string; company_id: string; user_id: string | null
+          id: string; company_id: string | null; user_id: string | null
           full_name: string; email: string; phone: string | null
           is_whatsapp: boolean; department: string | null
           is_contract_responsible: boolean; receives_ticket_cc: boolean

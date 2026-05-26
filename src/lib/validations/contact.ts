@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const contactSchema = z.object({
-  company_id: z.string().uuid(),
+  company_id: z.string().uuid().optional().nullable(),
   full_name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('E-mail inválido'),
   phone: z.string().optional(),

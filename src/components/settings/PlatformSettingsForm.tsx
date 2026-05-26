@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { platformSettingsSchema, type PlatformSettingsInput } from '@/lib/validations/settings'
-import { updateSettingsAction } from '@/app/(internal)/configuracoes/actions'
+import { updateSettingsAction, createInternalContactAction } from '@/app/(internal)/configuracoes/actions'
 import type { Database } from '@/types/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -14,7 +14,6 @@ interface MonitoringContact {
   id: string
   full_name: string
   email: string
-  companies: { name: string } | null
 }
 
 interface Props {
@@ -27,6 +26,12 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
   const [logoLightUrl, setLogoLightUrl] = useState(initialData?.logo_light_url ?? '')
   const [logoDarkUrl, setLogoDarkUrl] = useState(initialData?.logo_dark_url ?? '')
   const [monitoringContactId, setMonitoringContactId] = useState(initialData?.monitoring_contact_id ?? '')
+  const [contacts, setContacts] = useState<MonitoringContact[]>(monitoringContacts)
+  const [showNewContact, setShowNewContact] = useState(false)
+  const [newContactName, setNewContactName] = useState('')
+  const [newContactEmail, setNewContactEmail] = useState('')
+  const [newContactError, setNewContactError] = useState('')
+  const [newContactSaving, setNewContactSaving] = useState(false)
   const [uploadError, setUploadError] = useState('')
 
   async function handleLogoUpload(file: File, variant: 'light' | 'dark') {
@@ -69,6 +74,25 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
       billing_alert_days: initialData?.billing_alert_days ?? 7,
     },
   })
+
+  async function handleCreateContact() {
+    setNewContactError('')
+    setNewContactSaving(true)
+    const fd = new FormData()
+    fd.append('full_name', newContactName)
+    fd.append('email', newContactEmail)
+    const result = await createInternalContactAction(fd)
+    setNewContactSaving(false)
+    if (result?.error) {
+      setNewContactError(result.error)
+    } else if (result?.contact) {
+      setContacts(prev => [...prev, result.contact!].sort((a, b) => a.full_name.localeCompare(b.full_name)))
+      setMonitoringContactId(result.contact.id)
+      setShowNewContact(false)
+      setNewContactName('')
+      setNewContactEmail('')
+    }
+  }
 
   async function onSubmit(data: PlatformSettingsInput) {
     setFeedback(null)
@@ -279,23 +303,78 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
 
       <Card>
         <CardHeader><CardTitle>Monitoramento</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium">Contato padrão para alertas (solicitante)</label>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-2">Contato usado como solicitante nos chamados criados automaticamente por Zabbix, Azure Monitor e monitoramento de URLs.</p>
-            <select
-              value={monitoringContactId}
-              onChange={e => setMonitoringContactId(e.target.value)}
-              className="mt-1 block w-full border rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">— Sem contato padrão —</option>
-              {monitoringContacts.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name} ({c.email}){c.companies ? ` — ${c.companies.name}` : ''}
-                </option>
-              ))}
-            </select>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Usado como solicitante nos chamados abertos automaticamente por Zabbix, Azure Monitor e monitoramento de URLs.
+            </p>
+            <div className="flex gap-2">
+              <select
+                value={monitoringContactId}
+                onChange={e => setMonitoringContactId(e.target.value)}
+                className="flex-1 border rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">— Sem contato padrão —</option>
+                {contacts.map(c => (
+                  <option key={c.id} value={c.id}>{c.full_name} ({c.email})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowNewContact(v => !v)}
+                className="text-sm border rounded-md px-3 py-2 hover:bg-muted whitespace-nowrap"
+              >
+                + Novo contato
+              </button>
+            </div>
           </div>
+
+          {showNewContact && (
+            <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+              <p className="text-sm font-medium">Novo contato interno (ITRAMOS)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Nome *</label>
+                  <input
+                    autoFocus
+                    value={newContactName}
+                    onChange={e => setNewContactName(e.target.value)}
+                    placeholder="Ex: NOC ITRAMOS"
+                    className="mt-1 block w-full border rounded-md px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">E-mail *</label>
+                  <input
+                    type="email"
+                    value={newContactEmail}
+                    onChange={e => setNewContactEmail(e.target.value)}
+                    placeholder="noc@itramos.com.br"
+                    className="mt-1 block w-full border rounded-md px-2 py-1.5 text-sm"
+                  />
+                </div>
+              </div>
+              {newContactError && <p className="text-xs text-destructive">{newContactError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCreateContact}
+                  disabled={!newContactName.trim() || !newContactEmail.trim() || newContactSaving}
+                  className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md disabled:opacity-50"
+                >
+                  {newContactSaving ? 'Criando...' : 'Criar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowNewContact(false); setNewContactError('') }}
+                  className="text-sm border px-3 py-1.5 rounded-md hover:bg-muted"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

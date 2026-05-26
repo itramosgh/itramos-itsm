@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { platformSettingsSchema } from '@/lib/validations/settings'
 import type { Database } from '@/types/database'
+import { z } from 'zod'
 
 type SettingsUpdate = Database['public']['Tables']['platform_settings']['Update']
 
@@ -49,4 +50,35 @@ export async function updateSettingsAction(formData: FormData) {
 
   revalidatePath('/configuracoes')
   return { success: true }
+}
+
+const internalContactSchema = z.object({
+  full_name: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email('E-mail inválido'),
+})
+
+export async function createInternalContactAction(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado.' }
+  const { data: profileData } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  if (profileData?.role !== 'admin') return { error: 'Apenas administradores podem criar contatos internos.' }
+
+  const parsed = internalContactSchema.safeParse(Object.fromEntries(formData.entries()))
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { data: newContact, error } = await adminClient
+    .from('contacts')
+    .insert({ full_name: parsed.data.full_name, email: parsed.data.email, company_id: null, is_active: true } as never)
+    .select('id, full_name, email')
+    .single() as { data: { id: string; full_name: string; email: string } | null; error: any }
+
+  if (error || !newContact) return { error: error?.message ?? 'Erro ao criar contato' }
+
+  revalidatePath('/configuracoes/plataforma')
+  return { success: true, contact: newContact }
 }
