@@ -1,9 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { PlatformSettingsForm } from '@/components/settings/PlatformSettingsForm'
 
 export default async function ConfiguracoesPage() {
-  const supabase = await createClient()
-  const { data: settings } = await supabase
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { data: settings } = await adminClient
     .from('platform_settings')
     .select('*')
     .single()
