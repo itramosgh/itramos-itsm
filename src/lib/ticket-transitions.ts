@@ -1,7 +1,7 @@
 import type { TicketStatus } from '@/types/database'
 
 export const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
-  aberto:                ['em_andamento', 'agendado', 'aguardando_cliente'],
+  aberto:                ['em_andamento', 'agendado', 'aguardando_cliente', 'resolvido'],
   agendado:              ['em_andamento'],
   em_andamento:          ['aguardando_cliente', 'aguardando_fornecedor', 'aguardando_aprovacao',
                           'em_mudanca', 'em_deslocamento', 'agendado', 'resolvido', 'fechado'],
