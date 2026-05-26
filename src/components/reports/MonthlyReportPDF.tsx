@@ -118,8 +118,10 @@ const CHANNEL_LABELS: Record<string, string> = {
 export function MonthlyReportPDF({
   companyName, period, logoUrl, tickets, meetings = [], gmuds = [], monitoring = [],
 }: MonthlyReportProps) {
-  const closed = tickets.filter(t => t.closed_at)
-  const slaMet = tickets.filter(t => t.status === 'resolvido' || t.status === 'fechado').length
+  const resolved = tickets.filter(t => t.status === 'resolvido').length
+  const fechado = tickets.filter(t => t.status === 'fechado').length
+  const closedTotal = resolved + fechado
+  const slaMet = closedTotal
   const slaPerc = tickets.length > 0 ? Math.round((slaMet / tickets.length) * 100) : 0
   const reopened = tickets.filter(t => t.reopened).length
   const reopenRate = tickets.length > 0 ? Math.round((reopened / tickets.length) * 100) : 0
@@ -165,8 +167,9 @@ export function MonthlyReportPDF({
               <Text style={s.cardValue}>{tickets.length}</Text>
             </View>
             <View style={s.card}>
-              <Text style={s.cardLabel}>Fechados</Text>
-              <Text style={[s.cardValue, { color: palette.green }]}>{closed.length}</Text>
+              <Text style={s.cardLabel}>Resolvidos/Fechados</Text>
+              <Text style={[s.cardValue, { color: palette.green }]}>{closedTotal}</Text>
+              <Text style={{ fontSize: 7, color: palette.muted, marginTop: 2 }}>{resolved} resolvidos · {fechado} fechados</Text>
             </View>
             <View style={s.card}>
               <Text style={s.cardLabel}>SLA cumprido</Text>
