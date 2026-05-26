@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   }
 
   const ext = file.name.split('.').pop()
-  const path = `logo-${variant}.${ext}`
+  const path = `logo-${variant}-${Date.now()}.${ext}`
   const buffer = await file.arrayBuffer()
 
   const serviceSupabase = await createServiceClient()
