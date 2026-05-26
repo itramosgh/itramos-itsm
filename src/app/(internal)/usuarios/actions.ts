@@ -79,6 +79,20 @@ export async function updateUserAction(id: string, formData: FormData) {
   return { success: true }
 }
 
+export async function deleteUserAction(id: string): Promise<{ error?: string } | void> {
+  const callerClient = await createClient()
+  const { data: { user: caller } } = await callerClient.auth.getUser()
+  if (!caller) return { error: 'Não autorizado.' }
+  if (caller.id === id) return { error: 'Você não pode remover sua própria conta.' }
+  const { data: callerProfile } = await callerClient.from('profiles').select('role').eq('id', caller.id).single() as { data: any }
+  if (callerProfile?.role !== 'admin') return { error: 'Apenas administradores podem remover usuários.' }
+
+  const supabase = await createServiceClient()
+  const { error } = await supabase.auth.admin.deleteUser(id)
+  if (error) return { error: error.message }
+  revalidatePath('/usuarios')
+}
+
 export async function deactivateUserAction(id: string): Promise<{ error?: string } | void> {
   // Auth check first
   const callerClient = await createClient()

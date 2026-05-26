@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateUserAction, deactivateUserAction } from '@/app/(internal)/usuarios/actions'
+import { updateUserAction, deactivateUserAction, deleteUserAction } from '@/app/(internal)/usuarios/actions'
 import { UserForm } from './UserForm'
 import type { Database } from '@/types/database'
 
@@ -18,6 +18,16 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function UserList({ users }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  async function handleDelete(id: string) {
+    const result = await deleteUserAction(id)
+    if (result?.error) {
+      setErrors(prev => ({ ...prev, [id]: result.error! }))
+      setConfirmDeleteId(null)
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -60,12 +70,33 @@ export function UserList({ users }: Props) {
                 <button
                   type="button"
                   onClick={() => deactivateUserAction(user.id)}
-                  className="text-sm text-destructive hover:underline"
+                  className="text-sm text-muted-foreground hover:underline"
                 >
                   Desativar
                 </button>
+                {confirmDeleteId === user.id ? (
+                  <span className="flex items-center gap-1 text-sm">
+                    <span className="text-destructive font-medium">Remover?</span>
+                    <button type="button" onClick={() => handleDelete(user.id)}
+                      className="text-destructive hover:underline font-medium">Sim</button>
+                    <span className="text-muted-foreground">/</span>
+                    <button type="button" onClick={() => setConfirmDeleteId(null)}
+                      className="hover:underline">Não</button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(user.id)}
+                    className="text-sm text-destructive hover:underline"
+                  >
+                    Remover
+                  </button>
+                )}
               </div>
             </div>
+          )}
+          {errors[user.id] && (
+            <p className="text-xs text-destructive mt-2">{errors[user.id]}</p>
           )}
         </div>
       ))}
