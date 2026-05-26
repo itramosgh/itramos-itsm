@@ -53,19 +53,21 @@ export async function POST(
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  const isRecovery = payload.problem_type === 'RECOVERY'
-    || payload.recovery === '1'
-    || (!!payload.r_eventid && payload.r_eventid !== '0')
+  await insertLog(supabase, 'webhook_received', 'success', `Zabbix payload recebido (debug)`, { payload })
 
-  const externalAlertId = payload.event_id ?? payload.r_eventid ?? null
+  // recovery === '1' is the canonical Zabbix indicator via {EVENT.RECOVERY} macro
+  const isRecovery = payload.problem_type === 'RECOVERY' || payload.recovery === '1'
 
-  // 3. Recovery — close existing ticket
+  const externalAlertId = payload.event_id ?? null
+
+  // 3. Recovery — close existing ticket (use r_eventid to find the original problem event)
   if (isRecovery) {
-    if (externalAlertId) {
+    const recoveryAlertId = payload.r_eventid ?? payload.event_id ?? null
+    if (recoveryAlertId) {
       const { data: existingTicketRaw } = await supabase
         .from('tickets')
         .select('id, status')
-        .eq('external_alert_id', externalAlertId)
+        .eq('external_alert_id', recoveryAlertId)
         .not('status', 'in', '("fechado","resolvido")')
         .maybeSingle()
 
@@ -94,10 +96,10 @@ export async function POST(
       // Clean up pending alerts for this external event
       await (supabase.from('pending_monitoring_alerts') as any)
         .delete()
-        .eq('external_alert_id', externalAlertId)
+        .eq('external_alert_id', recoveryAlertId)
         .eq('monitoring_integration_id', integration.id)
     }
-    await insertLog(supabase, 'webhook_received', 'success', `Zabbix recovery recebido: ${payload.trigger_name ?? 'sem nome'}`, { external_alert_id: externalAlertId })
+    await insertLog(supabase, 'webhook_received', 'success', `Zabbix recovery recebido: ${payload.trigger_name ?? 'sem nome'}`, { external_alert_id: recoveryAlertId })
     return NextResponse.json({ ok: true, action: 'recovery_processed' })
   }
 
