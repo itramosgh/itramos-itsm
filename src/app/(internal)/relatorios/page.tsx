@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LineChart, GitMerge, Monitor, FileText, BarChart2 } from 'lucide-react'
+import { LineChart, GitMerge, Monitor, FileText, BarChart2, SlidersHorizontal } from 'lucide-react'
 
 const sections = [
   { href: '/relatorios/operacional', label: 'Dashboard Operacional', description: 'Visão geral de chamados, SLA e desempenho da equipe', icon: LineChart },
@@ -7,6 +7,7 @@ const sections = [
   { href: '/relatorios/monitoramento', label: 'Dashboard de Monitoramento', description: 'Status de alertas, URLs e integrações', icon: Monitor },
   { href: '/relatorios/mensal', label: 'Relatório Mensal', description: 'Resumo mensal de atendimentos e indicadores', icon: FileText },
   { href: '/relatorios/custos', label: 'Relatório de Custos', description: 'Horas e deslocamentos faturáveis por cliente', icon: BarChart2 },
+  { href: '/relatorios/personalizado', label: 'Relatório Personalizado', description: 'Filtros por período, cliente, analista, prioridade e mais — exportável em CSV', icon: SlidersHorizontal },
 ]
 
 export default function RelatoriosPage() {
