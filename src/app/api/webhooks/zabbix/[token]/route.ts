@@ -105,7 +105,40 @@ export async function POST(
     return NextResponse.json({ ok: true, action: 'recovery_processed' })
   }
 
-  // 4. Check monitoring window
+  // 4. Fallback recovery: even if not flagged as recovery, if there is an open ticket
+  // with this event_id it means Zabbix is sending a recovery/update — close it now
+  // regardless of business hours (resolution must never be blocked by the window).
+  if (externalAlertId) {
+    const { data: existingRaw } = await supabase
+      .from('tickets')
+      .select('id, status')
+      .eq('external_alert_id', externalAlertId)
+      .not('status', 'in', '("fechado","resolvido")')
+      .maybeSingle()
+    const existing = existingRaw as any
+    if (existing) {
+      if (isValidTransition(existing.status, 'resolvido')) {
+        await (supabase.from('tickets') as any).update({
+          status: 'resolvido',
+          resolution: 'Resolvido automaticamente via Zabbix',
+        }).eq('id', existing.id)
+        await supabase.from('ticket_interactions').insert({
+          ticket_id: existing.id,
+          type: 'system',
+          content: 'Resolvido automaticamente via Zabbix (recovery recebido fora do horário comercial)',
+          is_system: true,
+        } as any)
+        await insertLog(supabase, 'webhook_received', 'success', `Zabbix: chamado fechado por recovery fora da janela`, { ticket_id: existing.id, external_alert_id: externalAlertId })
+      }
+      await (supabase.from('pending_monitoring_alerts') as any)
+        .delete()
+        .eq('external_alert_id', externalAlertId)
+        .eq('monitoring_integration_id', integration.id)
+      return NextResponse.json({ ok: true, action: 'recovery_processed_out_of_window' })
+    }
+  }
+
+  // 6. Check monitoring window (only reached for new alerts)
   const now = new Date()
   const { data: settingsRaw } = await supabase
     .from('platform_settings')
