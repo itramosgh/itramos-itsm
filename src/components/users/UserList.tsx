@@ -42,6 +42,7 @@ export function UserList({ users }: Props) {
                 onSubmit={(fd) => updateUserAction(user.id, fd)}
                 defaultValues={{ full_name: user.full_name ?? '', role: user.role as 'admin' | 'gestor' | 'analista', notify_new_tickets: user.notify_new_tickets ?? false }}
                 submitLabel="Salvar"
+                hideEmail
               />
               <button
                 type="button"

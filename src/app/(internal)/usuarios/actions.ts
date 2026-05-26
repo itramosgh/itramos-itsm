@@ -89,10 +89,11 @@ export async function updateUserAction(id: string, formData: FormData) {
     })
   }
 
-  // as never: supabase-js generic constraint quirk with custom Update type
+  // email lives in auth.users, not profiles — exclude it from the update
+  const { email: _email, ...profileFields } = parsed.data
   const { error } = await supabase
     .from('profiles')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() } as never)
+    .update({ ...profileFields, updated_at: new Date().toISOString() } as never)
     .eq('id', id)
 
   if (error) return { error: error.message }

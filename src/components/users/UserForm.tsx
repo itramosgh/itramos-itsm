@@ -6,9 +6,10 @@ interface Props {
   onSubmit: (formData: FormData) => Promise<{ error?: string; success?: boolean } | void>
   defaultValues?: Partial<UserInput>
   submitLabel?: string
+  hideEmail?: boolean
 }
 
-export function UserForm({ onSubmit, defaultValues, submitLabel = 'Criar usuário' }: Props) {
+export function UserForm({ onSubmit, defaultValues, submitLabel = 'Criar usuário', hideEmail = false }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -33,16 +34,18 @@ export function UserForm({ onSubmit, defaultValues, submitLabel = 'Criar usuári
           className="mt-1 block w-full border rounded-md px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="text-sm font-medium">E-mail</label>
-        <input
-          name="email"
-          type="email"
-          defaultValue={defaultValues?.email}
-          required
-          className="mt-1 block w-full border rounded-md px-3 py-2 text-sm"
-        />
-      </div>
+      {!hideEmail && (
+        <div>
+          <label className="text-sm font-medium">E-mail</label>
+          <input
+            name="email"
+            type="email"
+            defaultValue={defaultValues?.email}
+            required
+            className="mt-1 block w-full border rounded-md px-3 py-2 text-sm"
+          />
+        </div>
+      )}
       <div>
         <label className="text-sm font-medium">Papel</label>
         <select
