@@ -60,9 +60,11 @@ export async function POST(
 
   const externalAlertId = payload.event_id ?? null
 
-  // 3. Recovery — close existing ticket (use r_eventid to find the original problem event)
+  // 3. Recovery — close existing ticket
+  // In Zabbix: {EVENT.ID} = problem event ID (same in recovery context), {EVENT.RECOVERY.ID} = OK event ID
+  // The ticket was stored with external_alert_id = event_id (problem), so search by event_id
   if (isRecovery) {
-    const recoveryAlertId = payload.r_eventid ?? payload.event_id ?? null
+    const recoveryAlertId = payload.event_id ?? null
     if (recoveryAlertId) {
       const { data: existingTicketRaw } = await supabase
         .from('tickets')
