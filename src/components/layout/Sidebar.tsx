@@ -72,7 +72,12 @@ function getInitialOpenGroups(pathname: string): Record<string, boolean> {
   )
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  appName?: string | null
+  logoUrl?: string | null
+}
+
+export function Sidebar({ appName, logoUrl }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState<Record<string, boolean>>(
     () => getInitialOpenGroups(pathname)
@@ -96,8 +101,13 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 border-r bg-background h-screen flex flex-col">
-      <div className="p-4 border-b">
-        <span className="font-semibold text-lg">ITRAMOS ITSM</span>
+      <div className="p-4 border-b flex items-center">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt={appName ?? 'Logo'} className="h-8 w-auto object-contain max-w-[180px]" />
+        ) : (
+          <span className="font-semibold text-lg">{appName || 'ITRAMOS ITSM'}</span>
+        )}
       </div>
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navigation.map(entry => {

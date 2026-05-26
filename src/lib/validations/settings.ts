@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const platformSettingsSchema = z.object({
+  app_name: z.string().optional(),
   company_name: z.string().optional(),
   company_website: z.string().url().optional().or(z.literal('')),
   company_address: z.string().optional(),

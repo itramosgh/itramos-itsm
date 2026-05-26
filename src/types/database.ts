@@ -66,7 +66,7 @@ export interface Database {
           business_hours_days: number[]; hourly_rate: number | null
           km_rate: number | null; billing_alert_days: number
           updated_at: string | null; updated_by: string | null
-          monitoring_contact_id: string | null
+          monitoring_contact_id: string | null; app_name: string | null
         }
         Insert: Partial<Database['public']['Tables']['platform_settings']['Row']>
         Update: Partial<Database['public']['Tables']['platform_settings']['Row']>

@@ -56,6 +56,7 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
   } = useForm<PlatformSettingsInput>({
     resolver: zodResolver(platformSettingsSchema) as unknown as Resolver<PlatformSettingsInput>,
     defaultValues: {
+      app_name: initialData?.app_name ?? '',
       company_name: initialData?.company_name ?? '',
       company_website: initialData?.company_website ?? '',
       company_address: initialData?.company_address ?? '',
@@ -144,6 +145,11 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
       <Card>
         <CardHeader><CardTitle>Dados da Empresa</CardTitle></CardHeader>
         <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Nome de exibição da aplicação</label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-1">Aparece no menu lateral. Se um logotipo estiver configurado, o logo é exibido no lugar.</p>
+            <input {...register('app_name')} placeholder="Ex: ITRAMOS ITSM" className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
+          </div>
           <div>
             <label className="text-sm font-medium">Nome da empresa</label>
             <input {...register('company_name')} className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />

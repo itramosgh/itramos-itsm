@@ -48,7 +48,7 @@ export async function updateSettingsAction(formData: FormData) {
 
   if (error) return { error: `Erro ao salvar: ${error.message}` }
 
-  revalidatePath('/configuracoes')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
