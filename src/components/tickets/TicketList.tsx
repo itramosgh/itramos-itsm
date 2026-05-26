@@ -50,7 +50,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               <td className="p-3">
                 <SLAIndicator createdAt={t.created_at} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
               </td>
-              <td className="p-3 text-xs text-muted-foreground">{fmtDate(t.created_at)}</td>
+              <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTimeShort(t.created_at)}</td>
             </tr>
           ))}
           {tickets.length === 0 && (
