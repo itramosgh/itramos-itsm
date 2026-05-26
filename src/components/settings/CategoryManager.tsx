@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createCategoryAction, updateCategoryAction, toggleCategoryAction } from '@/app/(internal)/configuracoes/categorias/actions'
+import { createCategoryAction, updateCategoryAction, toggleCategoryAction, deleteCategoryAction } from '@/app/(internal)/configuracoes/categorias/actions'
 import { Badge } from '@/components/ui/badge'
 
 interface Category {
@@ -21,6 +21,7 @@ export function CategoryManager({ categories }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValues, setEditValues] = useState(emptyForm)
   const [newValues, setNewValues] = useState(emptyForm)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -39,6 +40,13 @@ export function CategoryManager({ categories }: Props) {
     const result = await updateCategoryAction(id, fd)
     if (result?.error) setError(result.error)
     else setEditingId(null)
+  }
+
+  async function handleDelete(id: string) {
+    setError('')
+    const result = await deleteCategoryAction(id)
+    if (result?.error) setError(result.error)
+    setConfirmDeleteId(null)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -130,6 +138,24 @@ export function CategoryManager({ categories }: Props) {
                           {cat.is_active ? 'Desativar' : 'Ativar'}
                         </button>
                       </form>
+                      {confirmDeleteId === cat.id ? (
+                        <>
+                          <span className="text-sm text-destructive">Confirmar?</span>
+                          <button type="button" onClick={() => handleDelete(cat.id)}
+                            className="text-sm text-destructive font-medium hover:underline">
+                            Sim
+                          </button>
+                          <button type="button" onClick={() => setConfirmDeleteId(null)}
+                            className="text-sm text-muted-foreground hover:underline">
+                            Não
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => { setConfirmDeleteId(cat.id); setError('') }}
+                          className="text-sm text-destructive hover:underline">
+                          Remover
+                        </button>
+                      )}
                     </>
                   )}
                 </td>

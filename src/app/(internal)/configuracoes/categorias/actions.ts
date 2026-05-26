@@ -47,3 +47,13 @@ export async function toggleCategoryAction(id: string, isActive: boolean) {
   await supabase.from('ticket_categories').update({ is_active: isActive } as never).eq('id', id)
   revalidatePath('/configuracoes/categorias')
 }
+
+export async function deleteCategoryAction(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('ticket_categories').delete().eq('id', id)
+  // FK violation: category is referenced by tickets
+  if (error?.code === '23503') return { error: 'Categoria em uso por chamados e não pode ser removida. Desative-a.' }
+  if (error) return { error: error.message }
+  revalidatePath('/configuracoes/categorias')
+  return { success: true }
+}
