@@ -27,7 +27,7 @@ create or replace function public.find_similar_tickets(
 )
 returns table (id uuid, number integer, title text, created_at timestamptz)
 language sql stable security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select t.id, t.number, t.title, t.created_at
   from public.tickets t

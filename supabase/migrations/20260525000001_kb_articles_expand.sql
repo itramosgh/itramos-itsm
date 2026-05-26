@@ -44,7 +44,7 @@ returns table(
   category_id uuid
 )
 language sql stable security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select
     id,
