@@ -30,6 +30,26 @@ export async function createMonitoringIntegrationAction(companyId: string, _prev
   return { success: true }
 }
 
+export async function updateMonitoringIntegrationAction(id: string, companyId: string, formData: FormData) {
+  const raw = {
+    connector_type: formData.get('connector_type'),
+    window_type: formData.get('window_type'),
+    window_custom_days: formData.getAll('window_custom_days').map(Number),
+    window_custom_start: formData.get('window_custom_start') || undefined,
+    window_custom_end: formData.get('window_custom_end') || undefined,
+    out_of_window_behavior: formData.get('out_of_window_behavior'),
+    is_active: formData.get('is_active') !== 'false',
+  }
+  const parsed = monitoringIntegrationSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('monitoring_integrations').update(parsed.data as never).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath(`/clientes/${companyId}/monitoramento`)
+  return { success: true }
+}
+
 export async function toggleMonitoringIntegrationAction(id: string, companyId: string, isActive: boolean) {
   const supabase = await createClient()
   await supabase.from('monitoring_integrations').update({ is_active: isActive } as never).eq('id', id)
