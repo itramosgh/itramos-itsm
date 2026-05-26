@@ -107,7 +107,7 @@ export async function POST(
   const now = new Date()
   const { data: settingsRaw } = await supabase
     .from('platform_settings')
-    .select('business_hours_start, business_hours_end, business_hours_days')
+    .select('business_hours_start, business_hours_end, business_hours_days, monitoring_contact_id')
     .single()
   const settings = settingsRaw as any
 
@@ -157,19 +157,23 @@ export async function POST(
     }
   }
 
-  // 6. Get first active contact
-  const { data: contactRaw } = await supabase
-    .from('contacts')
-    .select('id')
-    .eq('company_id', integration.company_id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
+  // 6. Resolve contact: monitoring_contact_id from settings, or first active contact of the company
+  let contactId: string | null = settings?.monitoring_contact_id ?? null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const contact = contactRaw as any
-  if (!contact) {
+  if (!contactId) {
+    const { data: contactRaw } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('company_id', integration.company_id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    contactId = (contactRaw as any)?.id ?? null
+  }
+
+  if (!contactId) {
     await insertLog(supabase, 'webhook_received', 'failure', 'Zabbix: nenhum contato ativo no cliente — chamado não criado', { company_id: integration.company_id })
     return NextResponse.json({ ok: true, action: 'no_contact_skipped' })
   }
@@ -196,7 +200,7 @@ export async function POST(
       title,
       description,
       company_id: integration.company_id,
-      contact_id: contact.id,
+      contact_id: contactId,
       category_id: (category as any)?.id ?? null,
       priority,
       channel: 'zabbix',

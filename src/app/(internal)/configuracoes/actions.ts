@@ -25,6 +25,7 @@ export async function updateSettingsAction(formData: FormData) {
 
   const logoLightUrl = formData.get('logo_light_url') as string | null
   const logoDarkUrl = formData.get('logo_dark_url') as string | null
+  const monitoringContactId = formData.get('monitoring_contact_id') as string | null
 
   const payload: SettingsUpdate = {
     ...parsed.data,
@@ -33,6 +34,7 @@ export async function updateSettingsAction(formData: FormData) {
     updated_at: new Date().toISOString(),
     ...(logoLightUrl ? { logo_light_url: logoLightUrl } : {}),
     ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
+    monitoring_contact_id: monitoringContactId || null,
   }
 
   const adminClient = createAdminClient(

@@ -108,7 +108,7 @@ export async function POST(
   const now = new Date()
   const { data: settingsRaw } = await supabase
     .from('platform_settings')
-    .select('business_hours_start, business_hours_end, business_hours_days')
+    .select('business_hours_start, business_hours_end, business_hours_days, monitoring_contact_id')
     .single()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = settingsRaw as any
@@ -156,17 +156,23 @@ export async function POST(
     if (existing) return NextResponse.json({ ok: true, action: 'duplicate_ignored' })
   }
 
-  // 6. Get first active contact
-  const { data: contact } = await supabase
-    .from('contacts')
-    .select('id')
-    .eq('company_id', integrationData.company_id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
+  // 6. Resolve contact: monitoring_contact_id from settings, or first active contact of the company
+  let contactId: string | null = settings?.monitoring_contact_id ?? null
 
-  if (!contact) {
+  if (!contactId) {
+    const { data: contactRaw } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('company_id', integrationData.company_id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    contactId = (contactRaw as any)?.id ?? null
+  }
+
+  if (!contactId) {
     await insertLog(supabase, 'webhook_received', 'failure', 'Azure Monitor: nenhum contato ativo — chamado não criado', { company_id: integrationData.company_id })
     return NextResponse.json({ ok: true, action: 'no_contact_skipped' })
   }
@@ -194,8 +200,7 @@ export async function POST(
       title,
       description,
       company_id: integrationData.company_id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      contact_id: (contact as any).id,
+      contact_id: contactId,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       category_id: (category as any)?.id ?? null,
       priority,

@@ -43,6 +43,9 @@ export async function GET(request: Request) {
   const supabase = await createServiceClient()
   const now = new Date()
 
+  const { data: settingsRaw } = await supabase.from('platform_settings').select('monitoring_contact_id').single()
+  const monitoringContactId: string | null = (settingsRaw as any)?.monitoring_contact_id ?? null
+
   const { data: urls } = await supabase
     .from('monitored_urls')
     .select('*')
@@ -92,16 +95,20 @@ export async function GET(request: Request) {
 
       if ((company as any)?.is_blocked) continue
 
-      const { data: contact } = await supabase
-        .from('contacts')
-        .select('id')
-        .eq('company_id', urlRow.company_id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
+      let contactId: string | null = monitoringContactId
+      if (!contactId) {
+        const { data: contactRaw } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('company_id', urlRow.company_id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        contactId = (contactRaw as any)?.id ?? null
+      }
 
-      if (!contact) {
+      if (!contactId) {
         await insertLog(supabase, 'url_monitoring', 'failure', `URL DOWN sem contato ativo: ${urlRow.url}`, { url_id: urlRow.id })
         continue
       }
@@ -118,7 +125,7 @@ export async function GET(request: Request) {
           title: `Indisponibilidade detectada: ${urlRow.name}`,
           description: `A URL ${urlRow.url} está inacessível.\nErro: ${result.errorMessage ?? 'Sem resposta'}`,
           company_id: urlRow.company_id,
-          contact_id: (contact as any).id,
+          contact_id: contactId,
           category_id: (category as any)?.id ?? null,
           priority: 'alta',
           channel: 'url_monitoring',

@@ -17,6 +17,7 @@ export const platformSettingsSchema = z.object({
   hourly_rate: z.coerce.number().min(0).optional(),
   km_rate: z.coerce.number().min(0).optional(),
   billing_alert_days: z.coerce.number().int().min(1),
+  monitoring_contact_id: z.string().uuid().optional().nullable(),
 })
 
 export type PlatformSettingsInput = z.infer<typeof platformSettingsSchema>

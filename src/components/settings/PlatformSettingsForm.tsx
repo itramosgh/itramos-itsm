@@ -10,14 +10,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type Settings = Database['public']['Tables']['platform_settings']['Row']
 
-interface Props {
-  initialData: Settings | null
+interface MonitoringContact {
+  id: string
+  full_name: string
+  email: string
+  companies: { name: string } | null
 }
 
-export function PlatformSettingsForm({ initialData }: Props) {
+interface Props {
+  initialData: Settings | null
+  monitoringContacts?: MonitoringContact[]
+}
+
+export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: Props) {
   const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [logoLightUrl, setLogoLightUrl] = useState(initialData?.logo_light_url ?? '')
   const [logoDarkUrl, setLogoDarkUrl] = useState(initialData?.logo_dark_url ?? '')
+  const [monitoringContactId, setMonitoringContactId] = useState(initialData?.monitoring_contact_id ?? '')
   const [uploadError, setUploadError] = useState('')
 
   async function handleLogoUpload(file: File, variant: 'light' | 'dark') {
@@ -74,6 +83,7 @@ export function PlatformSettingsForm({ initialData }: Props) {
 
     if (logoLightUrl) formData.append('logo_light_url', logoLightUrl)
     if (logoDarkUrl) formData.append('logo_dark_url', logoDarkUrl)
+    if (monitoringContactId) formData.append('monitoring_contact_id', monitoringContactId)
 
     const result = await updateSettingsAction(formData)
     if (result?.error) {
@@ -263,6 +273,28 @@ export function PlatformSettingsForm({ initialData }: Props) {
             <label className="text-sm font-medium">Alerta de vencimento de contrato (dias antes)</label>
             <input type="number" {...register('billing_alert_days')} className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
             {errors.billing_alert_days && <p className="text-sm text-destructive mt-1">{errors.billing_alert_days.message}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Monitoramento</CardTitle></CardHeader>
+        <CardContent>
+          <div>
+            <label className="text-sm font-medium">Contato padrão para alertas (solicitante)</label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">Contato usado como solicitante nos chamados criados automaticamente por Zabbix, Azure Monitor e monitoramento de URLs.</p>
+            <select
+              value={monitoringContactId}
+              onChange={e => setMonitoringContactId(e.target.value)}
+              className="mt-1 block w-full border rounded-md px-3 py-2 text-sm"
+            >
+              <option value="">— Sem contato padrão —</option>
+              {monitoringContacts.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name} ({c.email}){c.companies ? ` — ${c.companies.name}` : ''}
+                </option>
+              ))}
+            </select>
           </div>
         </CardContent>
       </Card>
