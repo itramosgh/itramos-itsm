@@ -1,6 +1,6 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { platformSettingsSchema } from '@/lib/validations/settings'
 import type { Database } from '@/types/database'
 
@@ -34,8 +34,8 @@ export async function updateSettingsAction(formData: FormData) {
     ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
   }
 
-  // as never: supabase-js generic constraint quirk with custom Upsert type
-  const { error } = await supabase
+  const serviceClient = await createServiceClient()
+  const { error } = await serviceClient
     .from('platform_settings')
     .upsert(payload as never)
 
