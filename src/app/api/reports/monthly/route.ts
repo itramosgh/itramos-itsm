@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     supabase.from('platform_settings').select('logo_light_url').single(),
     supabase
       .from('tickets')
-      .select('number, title, status, priority, created_at, closed_at, reopen_count, ticket_categories(name), profiles!assigned_to(full_name)')
+      .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, ticket_categories(name)')
       .eq('company_id', companyId)
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`)
@@ -63,6 +63,12 @@ export async function GET(request: Request) {
   const companyName: string = companyData?.name ?? 'Cliente'
   const logoUrl: string | null = (settingsData as any)?.logo_light_url ?? null
 
+  const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
+  const { data: analysts } = analystIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name').in('id', analystIds)
+    : { data: [] as any[] }
+  const analystMap: Record<string, string> = Object.fromEntries(((analysts as any[]) ?? []).map((a: any) => [a.id, a.full_name]))
+
   const tickets: ReportTicket[] = (ticketsRaw ?? []).map((t: any) => ({
     number: t.number,
     title: t.title,
@@ -71,7 +77,7 @@ export async function GET(request: Request) {
     status: t.status,
     created_at: t.created_at,
     closed_at: t.closed_at ?? null,
-    analyst_name: (t.profiles as any)?.full_name ?? '—',
+    analyst_name: analystMap[t.assigned_to] ?? '—',
     reopened: (t.reopen_count ?? 0) > 0,
   }))
 
