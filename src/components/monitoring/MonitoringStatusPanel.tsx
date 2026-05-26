@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fmtTime, fmtDateTime } from '@/lib/format-date'
 
 function AvailabilityBar({ urlId, history }: { urlId: string; history: any[] }) {
-  const urlHistory = history.filter(h => h.monitored_url_id === urlId)
+  const urlHistory = history.filter(h => h.monitored_url_id === urlId).slice(-10)
   if (urlHistory.length === 0) return <span className="text-xs text-muted-foreground">Sem dados hoje</span>
 
   return (
