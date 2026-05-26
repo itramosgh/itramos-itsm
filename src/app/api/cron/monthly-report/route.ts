@@ -34,11 +34,11 @@ export async function GET(request: Request) {
 
   const { data: settings } = await supabase
     .from('platform_settings')
-    .select('logo_light_url, email_from_name, email_from_address, company_name')
+    .select('logo_light_url, email_from_name, email_from_address, company_name, app_name')
     .single() as { data: any }
 
   const logoUrl: string | null = settings?.logo_light_url ?? null
-  const providerName: string | null = settings?.company_name ?? null
+  const providerName: string | null = settings?.app_name || settings?.company_name || null
   const emailFrom = buildFromAddress(settings?.email_from_name ?? null, settings?.email_from_address ?? null)
 
   // Get all active companies that have at least one active contract

@@ -788,6 +788,38 @@ export async function updateTicketCostAction(ticketId: string, formData: FormDat
   return { success: true }
 }
 
+export async function updateTicketMetaAction(
+  ticketId: string,
+  data: { priority?: string; category_id?: string | null; assigned_to?: string | null }
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  if (!['admin', 'gestor', 'analista'].includes(profile?.role)) return { error: 'Sem permissão' }
+
+  await supabase.from('tickets').update(data as never).eq('id', ticketId)
+
+  const changes: string[] = []
+  if (data.priority) changes.push(`prioridade: ${data.priority}`)
+  if ('category_id' in data) changes.push('categoria atualizada')
+  if ('assigned_to' in data) changes.push(data.assigned_to ? 'analista atribuído' : 'analista removido')
+
+  if (changes.length > 0) {
+    await supabase.from('ticket_interactions').insert({
+      ticket_id: ticketId,
+      type: 'system',
+      content: `Chamado atualizado: ${changes.join(', ')}`,
+      is_system: true,
+      author_profile_id: user.id,
+    } as never)
+  }
+
+  revalidatePath(`/chamados/${ticketId}`)
+  return { success: true }
+}
+
 export async function markBilledAction(ticketId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

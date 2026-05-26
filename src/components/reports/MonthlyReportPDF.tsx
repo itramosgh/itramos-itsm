@@ -246,7 +246,10 @@ export function MonthlyReportPDF({
       {(meetings.length > 0 || gmuds.length > 0 || monitoring.length > 0) && (
         <Page size="A4" style={s.page}>
           <View style={s.header}>
-            <Text style={s.logoPlaceholder}>{provider}</Text>
+            {logoUrl
+              ? <Image src={logoUrl} style={s.logo} />
+              : <Text style={s.logoPlaceholder}>{provider}</Text>
+            }
             <View style={s.headerRight}>
               <Text style={s.companyName}>{companyName}</Text>
               <Text style={s.period}>Relatório Mensal — {period}</Text>

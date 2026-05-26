@@ -10,6 +10,7 @@ import { ReopenDialog } from '@/components/tickets/ReopenDialog'
 import { KbSuggestionApplyButton } from '@/components/tickets/KbSuggestionApplyButton'
 import { PresentialCostPanel } from '@/components/tickets/PresentialCostPanel'
 import { BillingSummary } from '@/components/tickets/BillingSummary'
+import { TicketMetaEditor } from '@/components/tickets/TicketMetaEditor'
 import { changeStatusAction, closeTicketFormAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
@@ -27,10 +28,11 @@ export default async function TicketDetailPage({
     { data: ticketRaw },
     { data: interactionsRaw },
     { data: templates },
-    _,
+    { data: analystsRaw },
     { data: { user } },
     { data: linkedGmuds },
     { data: costData },
+    { data: categoriesRaw },
   ] = await Promise.all([
     supabase.from('tickets').select(`
       *, companies(name), contacts(full_name, email),
@@ -48,6 +50,7 @@ export default async function TicketDetailPage({
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.from('ticket_costs').select('*').eq('ticket_id', id).maybeSingle(),
+    supabase.from('ticket_categories').select('id, name').eq('is_active', true).order('name'),
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,8 +89,6 @@ export default async function TicketDetailPage({
     resolvido: 'Resolvido', fechado: 'Fechado', reaberto: 'Reaberto',
   }
 
-  const PRIORITY_LABELS = { critica: '🔴 Crítica', alta: '🟠 Alta', media: '🟡 Média', baixa: '🟢 Baixa' }
-
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-start justify-between">
@@ -101,12 +102,15 @@ export default async function TicketDetailPage({
       <div className="grid grid-cols-2 gap-4 text-sm border rounded-md p-4">
         <div><span className="text-muted-foreground">Empresa:</span> {(ticket.companies as any)?.name}</div>
         <div><span className="text-muted-foreground">Solicitante:</span> {(ticket.contacts as any)?.full_name}</div>
-        <div><span className="text-muted-foreground">Prioridade:</span> {PRIORITY_LABELS[ticket.priority as keyof typeof PRIORITY_LABELS]}</div>
-        <div><span className="text-muted-foreground">Categoria:</span> {(ticket.ticket_categories as any)?.name ?? '—'}</div>
-        <div>
-          <span className="text-muted-foreground">Analista:</span>{' '}
-          <span>{(ticket.profiles as any)?.full_name ?? 'Não atribuído'}</span>
-        </div>
+        <TicketMetaEditor
+          ticketId={id}
+          priority={ticket.priority}
+          categoryId={ticket.category_id ?? null}
+          assignedTo={ticket.assigned_to ?? null}
+          analysts={(analystsRaw ?? []) as { id: string; full_name: string }[]}
+          categories={(categoriesRaw ?? []) as { id: string; name: string }[]}
+          isClosed={ticket.status === 'fechado'}
+        />
         <div>
           <span className="text-muted-foreground">SLA:</span>{' '}
           <SLAIndicator
