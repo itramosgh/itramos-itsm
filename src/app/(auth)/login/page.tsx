@@ -1,10 +1,10 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { MicrosoftLoginButton } from '@/components/auth/MicrosoftLoginButton'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 export default async function LoginPage() {
-  const supabase = await createClient()
+  const supabase = await createServiceClient()
   const { data: settings } = await supabase
     .from('platform_settings')
     .select('app_name, logo_light_url')
