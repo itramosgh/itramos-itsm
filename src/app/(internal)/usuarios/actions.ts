@@ -43,7 +43,7 @@ export async function createUserAction(formData: FormData) {
   // Generate invite link and send email
   try {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'invite',
+      type: 'recovery',
       email: parsed.data.email,
       options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha` },
     })
