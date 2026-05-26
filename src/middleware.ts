@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { updateSession } from '@/lib/supabase/session'
 import { getRedirectForUnauthenticated, getRedirectForRole, isInternalPath, isPortalPath } from '@/lib/auth'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request)
   const { pathname } = request.nextUrl
 
