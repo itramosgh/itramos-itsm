@@ -1,10 +1,22 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">ITSM ITRAMOS</h1>
-      <p className="mt-4 text-lg text-gray-600">
-        Sistema interno de gestão de chamados B2B
-      </p>
-    </main>
-  )
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single() as { data: any }
+
+  const role = profile?.role as string | undefined
+  if (!role || ['admin', 'gestor', 'analista'].includes(role)) {
+    redirect('/dashboard')
+  }
+
+  redirect('/portal/chamados')
 }
