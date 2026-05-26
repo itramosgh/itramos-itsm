@@ -30,8 +30,10 @@ export default async function DashboardPage() {
     .single() as { data: any }
 
   const now = new Date().toISOString()
+  const next2Hours = new Date(Date.now() + 2 * 3600 * 1000).toISOString()
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
   const next14Days = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString()
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
 
   const role = profile?.role
   const isAnalista = role === 'analista'
@@ -51,6 +53,8 @@ export default async function DashboardPage() {
     { data: upcomingMeetings },
     { data: upcomingGmuds },
     { data: pendingBilling },
+    { data: scheduledTickets },
+    { data: recurrenceAlerts },
   ] = await Promise.all([
     isAnalista
       ? supabase.from('tasks').select('id, title, due_date, companies(name)')
@@ -75,14 +79,25 @@ export default async function DashboardPage() {
           .lte('scheduled_at', nextWeek)
           .order('scheduled_at')
           .limit(5),
-    supabase
-      .from('change_requests')
-      .select('id, title, status, risk_level, maintenance_start, maintenance_end, profiles!responsible_id(full_name)')
-      .in('status', ['aprovada', 'em_execucao', 'aguardando_aprovacao'])
-      .gte('maintenance_start', now)
-      .lte('maintenance_start', next14Days)
-      .order('maintenance_start')
-      .limit(5),
+    // GMUDs: apenas aprovada | em_execucao; analistas filtram por responsible_id
+    isAnalista
+      ? supabase
+          .from('change_requests')
+          .select('id, title, status, risk_level, maintenance_start, maintenance_end, profiles!responsible_id(full_name)')
+          .in('status', ['aprovada', 'em_execucao'])
+          .eq('responsible_id', user!.id)
+          .gte('maintenance_start', now)
+          .lte('maintenance_start', next14Days)
+          .order('maintenance_start')
+          .limit(5)
+      : supabase
+          .from('change_requests')
+          .select('id, title, status, risk_level, maintenance_start, maintenance_end, profiles!responsible_id(full_name)')
+          .in('status', ['aprovada', 'em_execucao'])
+          .gte('maintenance_start', now)
+          .lte('maintenance_start', next14Days)
+          .order('maintenance_start')
+          .limit(5),
     (!isAnalista
       ? supabase
           .from('tickets')
@@ -92,7 +107,34 @@ export default async function DashboardPage() {
           .order('closed_at')
           .limit(10)
       : Promise.resolve({ data: [] })),
+    // Chamados agendados
+    isAnalista
+      ? supabase
+          .from('tickets')
+          .select('id, number, title, scheduled_at, companies(name), profiles!assigned_to(full_name)')
+          .eq('status', 'agendado')
+          .eq('assigned_to', user!.id)
+          .order('scheduled_at')
+          .limit(10)
+      : supabase
+          .from('tickets')
+          .select('id, number, title, scheduled_at, companies(name), profiles!assigned_to(full_name)')
+          .eq('status', 'agendado')
+          .order('scheduled_at')
+          .limit(10),
+    // Alertas de recorrência (admin/gestor apenas)
+    !isAnalista
+      ? supabase
+          .from('tickets')
+          .select('id, number, title, companies(name)')
+          .eq('recurrence_detected', true)
+          .gte('created_at', twoWeeksAgo)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] }),
   ]) as [
+    { data: any[] | null },
+    { data: any[] | null },
     { data: any[] | null },
     { data: any[] | null },
     { data: any[] | null },
@@ -103,7 +145,10 @@ export default async function DashboardPage() {
   const meetings = upcomingMeetings ?? []
   const gmuds = upcomingGmuds ?? []
   const billing = pendingBilling ?? []
-  const isEmpty = tasks.length === 0 && meetings.length === 0 && gmuds.length === 0 && billing.length === 0
+  const scheduled = scheduledTickets ?? []
+  const recurrence = recurrenceAlerts ?? []
+  const isEmpty = tasks.length === 0 && meetings.length === 0 && gmuds.length === 0
+    && billing.length === 0 && scheduled.length === 0 && recurrence.length === 0
 
   return (
     <div className="space-y-8 p-6">
@@ -115,6 +160,72 @@ export default async function DashboardPage() {
         </p>
       ) : (
         <>
+          {/* Chamados agendados */}
+          {scheduled.length > 0 && (
+            <section>
+              <h2 className="text-lg font-medium mb-3">Chamados Agendados</h2>
+              <div className="divide-y rounded-lg border">
+                {(scheduled as any[]).map((t: any) => {
+                  const isUrgent = t.scheduled_at && new Date(t.scheduled_at) <= new Date(next2Hours)
+                  return (
+                    <a
+                      key={t.id}
+                      href={`/chamados/${t.id}`}
+                      className={`flex items-center justify-between px-4 py-3 gap-4 hover:bg-muted/50 ${isUrgent ? 'bg-orange-50' : ''}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">
+                          #{t.number} — {t.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(t.companies as any)?.name ?? '—'}
+                          {!isAnalista && (t.profiles as any)?.full_name && (
+                            <> · {(t.profiles as any).full_name}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isUrgent && (
+                          <Badge variant="destructive" className="whitespace-nowrap">Próximas 2h</Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {t.scheduled_at ? formatDateTime(t.scheduled_at) : '—'}
+                        </span>
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Alertas de recorrência (admin/gestor) */}
+          {!isAnalista && recurrence.length > 0 && (
+            <section>
+              <h2 className="text-lg font-medium mb-3 flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                Alertas de recorrência ({recurrence.length})
+              </h2>
+              <div className="divide-y rounded-lg border border-amber-200 bg-amber-50">
+                {(recurrence as any[]).map((t: any) => (
+                  <a
+                    key={t.id}
+                    href={`/chamados/${t.id}`}
+                    className="flex items-center justify-between px-4 py-3 gap-4 hover:bg-amber-100"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">#{t.number} — {t.title}</p>
+                      <p className="text-xs text-muted-foreground">{(t.companies as any)?.name ?? '—'}</p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 border-amber-400 text-amber-700">
+                      Recorrente
+                    </Badge>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Tarefas vencidas */}
           {tasks.length > 0 && (
             <section>
@@ -200,7 +311,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <Badge variant={gmud.status === 'em_execucao' ? 'default' : 'secondary'} className="shrink-0">
-                      {gmud.status === 'em_execucao' ? 'Em Execução' : gmud.status === 'aprovada' ? 'Aprovada' : 'Ag. Aprovação'}
+                      {gmud.status === 'em_execucao' ? 'Em Execução' : 'Aprovada'}
                     </Badge>
                   </a>
                 ))}
