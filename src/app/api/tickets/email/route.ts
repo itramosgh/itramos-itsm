@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, passwordSetupHtml, buildFromAddress } from '@/lib/email'
+import { checkAndAlertRecurrence } from '@/lib/recurrence-check'
 
 interface ResendInboundPayload {
   from: string
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     // Remetente conhecido — criar chamado
     const activeContract = (contact as any).contracts?.contracts?.find((c: any) => c.status === 'ativo')
 
-    await supabase.from('tickets').insert({
+    const { data: createdTicket } = await supabase.from('tickets').insert({
       title: subject,
       description: body,
       priority: 'media',
@@ -70,7 +71,11 @@ export async function POST(request: Request) {
       company_id: (contact as any).company_id,
       contact_id: (contact as any).id,
       contract_id: activeContract?.id ?? null,
-    } as never)
+    } as never).select('id').single()
+
+    if (createdTicket) {
+      void checkAndAlertRecurrence((createdTicket as any).id).catch(() => {/* silencioso */})
+    }
 
     return NextResponse.json({ ok: true, action: 'ticket_created' })
   }

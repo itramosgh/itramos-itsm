@@ -8,6 +8,7 @@ import type { TicketStatus } from '@/types/database'
 import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
 import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
 import { notifyTeams } from '@/lib/teams'
+import { checkAndAlertRecurrence } from '@/lib/recurrence-check'
 
 export async function createTicketAction(_prevState: unknown, formData: FormData) {
   const parsed = ticketSchema.safeParse({
@@ -32,6 +33,9 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
     .single<{ id: string; number: number }>()
 
   if (error) return { error: error.message }
+
+  // Verificar recorrência em background (não bloqueia a resposta)
+  void checkAndAlertRecurrence(ticket!.id).catch(() => {/* silencioso */})
 
   await supabase.from('ticket_interactions').insert({
     ticket_id: ticket!.id,
