@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { userSchema } from '@/lib/validations/user'
+import { insertLog } from '@/lib/log'
 
 export async function createUserAction(formData: FormData) {
   // Auth check first
@@ -41,13 +42,16 @@ export async function createUserAction(formData: FormData) {
 
   // Generate invite link and send email
   try {
-    const { data: linkData } = await supabase.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'invite',
       email: parsed.data.email,
       options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha` },
     })
+    if (linkError) throw new Error(`generateLink: ${linkError.message}`)
     const inviteLink = (linkData as any)?.properties?.action_link
-    if (inviteLink) {
+    if (!inviteLink) {
+      await insertLog(supabase, 'email_sent', 'failure', 'Convite de usuário: link de convite não gerado', { email: parsed.data.email, linkData: JSON.stringify(linkData) })
+    } else {
       const roleLabels: Record<string, string> = { admin: 'Admin', gestor: 'Gestor', analista: 'Analista' }
       const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
       await sendEmailFromTemplate('usuario_interno_criado', parsed.data.email, {
@@ -56,9 +60,10 @@ export async function createUserAction(formData: FormData) {
         link_definir_senha: inviteLink,
         app_url: process.env.NEXT_PUBLIC_APP_URL ?? '',
       })
+      await insertLog(supabase, 'email_sent', 'success', 'Convite de usuário enviado', { email: parsed.data.email })
     }
-  } catch {
-    // Email failure doesn't block user creation
+  } catch (err) {
+    await insertLog(supabase, 'email_sent', 'failure', 'Erro ao enviar convite de usuário', { email: parsed.data.email, error: String(err) }).catch(() => null)
   }
 
   revalidatePath('/usuarios')
