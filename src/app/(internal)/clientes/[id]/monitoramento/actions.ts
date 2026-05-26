@@ -65,6 +65,22 @@ export async function createMonitoredUrlAction(companyId: string, _prevState: un
   return { success: true }
 }
 
+export async function updateMonitoredUrlAction(id: string, companyId: string, formData: FormData) {
+  const raw = {
+    url: formData.get('url'),
+    name: formData.get('name'),
+    check_interval_minutes: formData.get('check_interval_minutes'),
+  }
+  const parsed = monitoredUrlSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('monitored_urls').update(parsed.data as never).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath(`/clientes/${companyId}/monitoramento`)
+  return { success: true }
+}
+
 export async function toggleMonitoredUrlAction(id: string, companyId: string, isActive: boolean) {
   const supabase = await createClient()
   await supabase.from('monitored_urls').update({ is_active: isActive } as never).eq('id', id)
