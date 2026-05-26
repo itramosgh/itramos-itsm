@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -24,12 +24,13 @@ export async function POST(request: Request) {
   const path = `logo-${variant}.${ext}`
   const buffer = await file.arrayBuffer()
 
-  const { error } = await supabase.storage
+  const serviceSupabase = await createServiceClient()
+  const { error } = await serviceSupabase.storage
     .from('logos')
     .upload(path, buffer, { contentType: file.type, upsert: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data } = supabase.storage.from('logos').getPublicUrl(path)
+  const { data } = serviceSupabase.storage.from('logos').getPublicUrl(path)
   return NextResponse.json({ url: data.publicUrl })
 }
