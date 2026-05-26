@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { updateSession } from '@/lib/supabase/middleware'
 import { getRedirectForUnauthenticated, getRedirectForRole, isInternalPath, isPortalPath } from '@/lib/auth'
 
@@ -14,7 +15,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 
-  const role = (user.app_metadata?.role as string) ?? 'cliente'
+  // Read role from profiles table (role is not stored in app_metadata)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const role = (profile?.role as string) ?? 'cliente'
   const redirect = getRedirectForRole(role, pathname)
   if (redirect) {
     return NextResponse.redirect(new URL(redirect, request.url))
