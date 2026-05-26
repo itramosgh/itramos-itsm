@@ -35,6 +35,27 @@ export async function createContactAction(companyId: string, formData: FormData)
   return { success: true }
 }
 
+export async function updateContactAction(contactId: string, companyId: string, formData: FormData) {
+  const { error: authError, supabase } = await requireAdminOrGestor()
+  if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }
+
+  const raw = {
+    ...Object.fromEntries(formData.entries()),
+    company_id: companyId,
+    is_whatsapp: formData.get('is_whatsapp') === 'on',
+    is_contract_responsible: formData.get('is_contract_responsible') === 'on',
+    receives_ticket_cc: formData.get('receives_ticket_cc') === 'on',
+  }
+  const parsed = contactSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('contacts').update(parsed.data as never).eq('id', contactId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clientes/${companyId}/contatos`)
+  return { success: true }
+}
+
 export async function updateContactFlagsAction(
   contactId: string,
   companyId: string,
