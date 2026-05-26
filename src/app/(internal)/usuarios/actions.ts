@@ -39,6 +39,28 @@ export async function createUserAction(formData: FormData) {
 
   if (profileError) return { error: profileError.message }
 
+  // Generate invite link and send email
+  try {
+    const { data: linkData } = await supabase.auth.admin.generateLink({
+      type: 'invite',
+      email: parsed.data.email,
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha` },
+    })
+    const inviteLink = (linkData as any)?.properties?.action_link
+    if (inviteLink) {
+      const roleLabels: Record<string, string> = { admin: 'Admin', gestor: 'Gestor', analista: 'Analista' }
+      const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+      await sendEmailFromTemplate('usuario_interno_criado', parsed.data.email, {
+        nome_usuario: parsed.data.full_name,
+        perfil: roleLabels[parsed.data.role] ?? parsed.data.role,
+        link_definir_senha: inviteLink,
+        app_url: process.env.NEXT_PUBLIC_APP_URL ?? '',
+      })
+    }
+  } catch {
+    // Email failure doesn't block user creation
+  }
+
   revalidatePath('/usuarios')
   return { success: true }
 }
