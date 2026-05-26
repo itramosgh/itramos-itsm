@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateContactAction, updateContactFlagsAction, grantPortalAccessAction, deleteContactAction } from '@/app/(internal)/clientes/[id]/contatos/actions'
+import { updateContactAction, updateContactFlagsAction, grantPortalAccessAction, deleteContactAction, resendContactInviteAction } from '@/app/(internal)/clientes/[id]/contatos/actions'
 import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['contacts']['Row']
@@ -23,6 +23,8 @@ export function ContactList({ contacts, companyId }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<EditValues>({ full_name: '', email: '', phone: '', department: '', is_whatsapp: false })
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [inviteSending, setInviteSending] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState<Record<string, boolean>>({})
 
   function startEdit(contact: Contact) {
     setEditingId(contact.id)
@@ -58,6 +60,18 @@ export function ContactList({ contacts, companyId }: Props) {
   async function handleGrantAccess(contactId: string) {
     const result = await grantPortalAccessAction(contactId, companyId)
     if (result?.error) setErrors((prev) => ({ ...prev, [contactId]: result.error! }))
+  }
+
+  async function handleResendInvite(contactId: string) {
+    setInviteSending(contactId)
+    const result = await resendContactInviteAction(contactId, companyId)
+    setInviteSending(null)
+    if (result?.error) {
+      setErrors(prev => ({ ...prev, [contactId]: result.error! }))
+    } else {
+      setInviteSent(prev => ({ ...prev, [contactId]: true }))
+      setTimeout(() => setInviteSent(prev => ({ ...prev, [contactId]: false })), 3000)
+    }
   }
 
   async function handleDelete(contactId: string) {
@@ -153,6 +167,13 @@ export function ContactList({ contacts, companyId }: Props) {
                   <button type="button" onClick={() => handleGrantAccess(contact.id)}
                     className="text-xs border rounded px-2 py-1 hover:bg-muted">
                     Dar acesso ao portal
+                  </button>
+                )}
+                {contact.user_id && (
+                  <button type="button" onClick={() => handleResendInvite(contact.id)}
+                    disabled={inviteSending === contact.id}
+                    className="text-xs border rounded px-2 py-1 hover:bg-muted disabled:opacity-50">
+                    {inviteSending === contact.id ? 'Enviando...' : inviteSent[contact.id] ? '✓ Enviado' : 'Reenviar link de senha'}
                   </button>
                 )}
                 {confirmDeleteId === contact.id ? (

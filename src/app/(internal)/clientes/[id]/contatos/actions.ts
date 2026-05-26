@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { contactSchema } from '@/lib/validations/contact'
+import { insertLog } from '@/lib/log'
 
 async function requireAdminOrGestor() {
   const supabase = await createClient()
@@ -96,6 +97,44 @@ export async function deleteContactAction(contactId: string, companyId: string) 
 
   revalidatePath(`/clientes/${companyId}/contatos`)
   return { success: true }
+}
+
+export async function resendContactInviteAction(contactId: string, companyId: string): Promise<{ error?: string; success?: boolean }> {
+  const { error: authError, supabase: callerClient } = await requireAdminOrGestor()
+  if (authError || !callerClient) return { error: authError ?? 'Não autorizado.' }
+
+  const { data: contact } = await callerClient
+    .from('contacts')
+    .select('email, full_name, user_id')
+    .eq('id', contactId)
+    .single() as { data: { email: string; full_name: string; user_id: string | null } | null; error: unknown }
+
+  if (!contact) return { error: 'Contato não encontrado.' }
+  if (!contact.user_id) return { error: 'Contato não possui acesso ao portal.' }
+
+  const serviceSupabase = await createServiceClient()
+
+  try {
+    const { data: linkData, error: linkError } = await serviceSupabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: contact.email,
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/portal/redefinir-senha` },
+    })
+    if (linkError) throw new Error(linkError.message)
+    const inviteLink = (linkData as any)?.properties?.action_link
+    if (!inviteLink) throw new Error('Link não gerado.')
+
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    await sendEmailFromTemplate('definicao_senha_link', contact.email, {
+      nome_contato: contact.full_name,
+      link_definir_senha: inviteLink,
+    })
+    await insertLog(serviceSupabase, 'email_sent', 'success', 'Reenvio de link de senha para contato do portal', { email: contact.email })
+    return { success: true }
+  } catch (err) {
+    await insertLog(serviceSupabase, 'email_sent', 'failure', 'Erro ao reenviar link de senha para contato', { email: contact.email, error: String(err) }).catch(() => null)
+    return { error: String(err) }
+  }
 }
 
 export async function grantPortalAccessAction(contactId: string, companyId: string) {
