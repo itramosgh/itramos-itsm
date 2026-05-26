@@ -106,8 +106,8 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
       }
     })
 
-    if (logoLightUrl) formData.append('logo_light_url', logoLightUrl)
-    if (logoDarkUrl) formData.append('logo_dark_url', logoDarkUrl)
+    formData.append('logo_light_url', logoLightUrl)
+    formData.append('logo_dark_url', logoDarkUrl)
     if (monitoringContactId) formData.append('monitoring_contact_id', monitoringContactId)
 
     const result = await updateSettingsAction(formData)
@@ -181,9 +181,13 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
             <div>
               <label className="text-sm font-medium">Logo (tema claro)</label>
               {logoLightUrl && (
-                <div className="mt-1 mb-2">
+                <div className="mt-1 mb-2 flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logoLightUrl} alt="Logo claro" className="h-12 object-contain border rounded-md p-1 bg-white" />
+                  <button type="button" onClick={() => setLogoLightUrl('')}
+                    className="text-xs text-destructive hover:underline">
+                    Remover
+                  </button>
                 </div>
               )}
               <input
@@ -199,9 +203,13 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
             <div>
               <label className="text-sm font-medium">Logo (tema escuro)</label>
               {logoDarkUrl && (
-                <div className="mt-1 mb-2">
+                <div className="mt-1 mb-2 flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logoDarkUrl} alt="Logo escuro" className="h-12 object-contain border rounded-md p-1 bg-gray-900" />
+                  <button type="button" onClick={() => setLogoDarkUrl('')}
+                    className="text-xs text-destructive hover:underline">
+                    Remover
+                  </button>
                 </div>
               )}
               <input

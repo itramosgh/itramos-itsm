@@ -33,8 +33,8 @@ export async function updateSettingsAction(formData: FormData) {
     id: 1,
     updated_by: user.id,
     updated_at: new Date().toISOString(),
-    ...(logoLightUrl ? { logo_light_url: logoLightUrl } : {}),
-    ...(logoDarkUrl ? { logo_dark_url: logoDarkUrl } : {}),
+    logo_light_url: logoLightUrl || null,
+    logo_dark_url: logoDarkUrl || null,
     monitoring_contact_id: monitoringContactId || null,
   }
 
