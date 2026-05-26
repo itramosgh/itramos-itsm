@@ -21,7 +21,6 @@ const navItems = [
   { href: '/reunioes', label: 'Reuniões', icon: Calendar },
   { href: '/comunicados', label: 'Comunicados', icon: Megaphone },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
-  { href: '/configuracoes/email-templates', label: 'Templates de E-mail', icon: Mail },
 ]
 
 export function Sidebar() {
