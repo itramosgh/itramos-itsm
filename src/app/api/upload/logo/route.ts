@@ -6,7 +6,8 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const role = user.app_metadata?.role as string
+  const { data: profileData } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  const role = profileData?.role as string
   if (!['admin', 'gestor'].includes(role)) {
     return NextResponse.json({ error: 'Apenas admin e gestor podem fazer upload' }, { status: 403 })
   }

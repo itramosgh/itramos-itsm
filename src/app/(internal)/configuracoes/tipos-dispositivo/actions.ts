@@ -11,7 +11,8 @@ async function requireAdminOrGestor() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado.', supabase: null }
-  const role = user.app_metadata?.role as string
+  const { data: profileData } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  const role = profileData?.role as string
   if (!['admin', 'gestor'].includes(role)) return { error: 'Permissão insuficiente.', supabase: null }
   return { error: null, supabase }
 }

@@ -12,7 +12,8 @@ export async function portalLoginAction(prevState: { error: string } | null, for
   if (error) return { error: 'E-mail ou senha incorretos' }
 
   // Ensure this is a client user (not internal)
-  const role = data.user.app_metadata?.role
+  const { data: profileData } = await supabase.from('profiles').select('role').eq('id', data.user.id).single() as { data: any }
+  const role = profileData?.role
   if (role && role !== 'cliente') {
     await supabase.auth.signOut()
     return { error: 'Use o painel interno para fazer login.' }

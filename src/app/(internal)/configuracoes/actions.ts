@@ -18,7 +18,8 @@ export async function updateSettingsAction(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado.' }
 
-  const role = user.app_metadata?.role as string
+  const { data: profileData } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  const role = profileData?.role as string
   if (role !== 'admin') return { error: 'Apenas administradores podem alterar configurações.' }
 
   const logoLightUrl = formData.get('logo_light_url') as string | null

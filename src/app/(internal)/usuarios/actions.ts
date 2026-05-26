@@ -8,7 +8,8 @@ export async function createUserAction(formData: FormData) {
   const callerClient = await createClient()
   const { data: { user: caller } } = await callerClient.auth.getUser()
   if (!caller) return { error: 'Não autorizado.' }
-  const callerRole = caller.app_metadata?.role as string
+  const { data: callerProfile } = await callerClient.from('profiles').select('role').eq('id', caller.id).single() as { data: any }
+  const callerRole = callerProfile?.role as string
   if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
 
   const raw = {
@@ -47,7 +48,8 @@ export async function updateUserAction(id: string, formData: FormData) {
   const callerClient = await createClient()
   const { data: { user: caller } } = await callerClient.auth.getUser()
   if (!caller) return { error: 'Não autorizado.' }
-  const callerRole = caller.app_metadata?.role as string
+  const { data: callerProfile } = await callerClient.from('profiles').select('role').eq('id', caller.id).single() as { data: any }
+  const callerRole = callerProfile?.role as string
   if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
 
   const raw = {
@@ -82,7 +84,8 @@ export async function deactivateUserAction(id: string): Promise<{ error?: string
   const callerClient = await createClient()
   const { data: { user: caller } } = await callerClient.auth.getUser()
   if (!caller) return { error: 'Não autorizado.' }
-  const callerRole = caller.app_metadata?.role as string
+  const { data: callerProfile } = await callerClient.from('profiles').select('role').eq('id', caller.id).single() as { data: any }
+  const callerRole = callerProfile?.role as string
   if (!['admin', 'gestor'].includes(callerRole)) return { error: 'Permissão insuficiente.' }
 
   const supabase = await createServiceClient()
