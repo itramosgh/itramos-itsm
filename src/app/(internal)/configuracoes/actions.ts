@@ -39,7 +39,7 @@ export async function updateSettingsAction(formData: FormData) {
     .from('platform_settings')
     .upsert(payload as never)
 
-  if (error) return { error: 'Erro ao salvar configurações.' }
+  if (error) return { error: `Erro ao salvar: ${error.message}` }
 
   revalidatePath('/configuracoes')
   return { success: true }
