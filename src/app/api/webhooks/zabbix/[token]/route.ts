@@ -55,7 +55,7 @@ export async function POST(
 
   const isRecovery = payload.problem_type === 'RECOVERY'
     || payload.recovery === '1'
-    || !!payload.r_eventid
+    || (!!payload.r_eventid && payload.r_eventid !== '0')
 
   const externalAlertId = payload.event_id ?? payload.r_eventid ?? null
 
