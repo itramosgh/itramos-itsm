@@ -35,7 +35,7 @@ export async function checkAndAlertRecurrence(ticketId: string): Promise<void> {
   const minTickets: number = settings.recurrence_min_tickets ?? 3
   const since = new Date(Date.now() - windowDays * 86_400_000).toISOString()
 
-  const { data: similar } = await supabase.rpc('find_similar_tickets', {
+  const { data: similar } = await (supabase.rpc as any)('find_similar_tickets', {
     p_title: ticket.title,
     p_company_id: ticket.company_id,
     p_exclude_id: ticketId,
@@ -45,9 +45,9 @@ export async function checkAndAlertRecurrence(ticketId: string): Promise<void> {
 
   if (!similar || !shouldAlert(similar.length, minTickets)) return
 
-  await supabase
+  await (supabase as any)
     .from('tickets')
-    .update({ recurrence_detected: true } as any)
+    .update({ recurrence_detected: true })
     .eq('id', ticketId)
 
   const { data: gestores } = await supabase
