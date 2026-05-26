@@ -33,6 +33,22 @@ export async function createDeviceTypeAction(formData: FormData) {
   return { success: true }
 }
 
+export async function updateDeviceTypeAction(id: string, formData: FormData) {
+  const { error: authError, supabase } = await requireAdminOrGestor()
+  if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }
+
+  const parsed = deviceTypeSchema.safeParse({ name: formData.get('name') })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  // as never: supabase-js generic constraint quirk
+  const { error } = await supabase.from('device_types').update(parsed.data as never).eq('id', id)
+  if (error?.code === '23505') return { error: 'Já existe um tipo com este nome.' }
+  if (error) return { error: error.message }
+
+  revalidatePath('/configuracoes/tipos-dispositivo')
+  return { success: true }
+}
+
 export async function deactivateDeviceTypeAction(id: string) {
   const { error: authError, supabase } = await requireAdminOrGestor()
   if (authError || !supabase) return { error: authError ?? 'Não autorizado.' }

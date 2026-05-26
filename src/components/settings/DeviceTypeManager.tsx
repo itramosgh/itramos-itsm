@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createDeviceTypeAction, deactivateDeviceTypeAction } from '@/app/(internal)/configuracoes/tipos-dispositivo/actions'
+import { createDeviceTypeAction, updateDeviceTypeAction, deactivateDeviceTypeAction } from '@/app/(internal)/configuracoes/tipos-dispositivo/actions'
 
 interface DeviceType {
   id: string
@@ -16,6 +16,8 @@ export function DeviceTypeManager({ deviceTypes }: Props) {
   const [newName, setNewName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
 
   const active = deviceTypes.filter(dt => dt.is_active !== false)
   const inactive = deviceTypes.filter(dt => dt.is_active === false)
@@ -30,6 +32,15 @@ export function DeviceTypeManager({ deviceTypes }: Props) {
     if (result?.error) setError(result.error)
     else setNewName('')
     setLoading(false)
+  }
+
+  async function handleUpdate(id: string) {
+    setError('')
+    const fd = new FormData()
+    fd.append('name', editName)
+    const result = await updateDeviceTypeAction(id, fd)
+    if (result?.error) setError(result.error)
+    else setEditingId(null)
   }
 
   async function handleDeactivate(id: string) {
@@ -58,12 +69,44 @@ export function DeviceTypeManager({ deviceTypes }: Props) {
             )}
             {active.map(dt => (
               <tr key={dt.id} className="border-t hover:bg-muted/50">
-                <td className="px-4 py-2">{dt.name}</td>
-                <td className="px-4 py-2 text-right">
-                  <button type="button" onClick={() => handleDeactivate(dt.id)}
-                    className="text-sm text-destructive hover:underline">
-                    Desativar
-                  </button>
+                <td className="px-4 py-2">
+                  {editingId === dt.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      className="border rounded-md px-2 py-1 text-sm w-full"
+                    />
+                  ) : (
+                    dt.name
+                  )}
+                </td>
+                <td className="px-4 py-2 text-right space-x-3 whitespace-nowrap">
+                  {editingId === dt.id ? (
+                    <>
+                      <button type="button" onClick={() => handleUpdate(dt.id)}
+                        disabled={!editName.trim()}
+                        className="text-sm text-primary hover:underline disabled:opacity-50">
+                        Salvar
+                      </button>
+                      <button type="button" onClick={() => setEditingId(null)}
+                        className="text-sm text-muted-foreground hover:underline">
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => { setEditingId(dt.id); setEditName(dt.name); setError('') }}
+                        className="text-sm hover:underline">
+                        Editar
+                      </button>
+                      <button type="button" onClick={() => handleDeactivate(dt.id)}
+                        className="text-sm text-destructive hover:underline">
+                        Desativar
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
