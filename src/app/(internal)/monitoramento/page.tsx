@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MonitoringStatusPanel } from '@/components/monitoring/MonitoringStatusPanel'
+import { AutoRefresh } from '@/components/ui/AutoRefresh'
 
 export default async function MonitoramentoPage() {
   const supabase = await createClient()
@@ -35,6 +36,7 @@ export default async function MonitoramentoPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh intervalSeconds={30} />
       <h1 className="text-2xl font-semibold">Painel de Monitoramento</h1>
       <MonitoringStatusPanel
         urls={(urls ?? []) as any[]}
