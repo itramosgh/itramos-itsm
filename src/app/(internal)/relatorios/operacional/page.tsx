@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { AutoRefresh } from '@/components/ui/AutoRefresh'
 
 export default async function DashboardOperacionalPage({
   searchParams,
@@ -101,6 +102,7 @@ export default async function DashboardOperacionalPage({
 
   return (
     <div className="space-y-8">
+      <AutoRefresh intervalSeconds={30} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-semibold">Dashboard Operacional</h1>
         <form className="flex gap-2 items-end flex-wrap">

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { TicketList } from '@/components/tickets/TicketList'
+import { AutoRefresh } from '@/components/ui/AutoRefresh'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -40,6 +41,7 @@ export default async function ChamadosPage({
 
   return (
     <div className="space-y-4">
+      <AutoRefresh intervalSeconds={30} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Chamados</h1>
         <Link href="/chamados/novo" className={buttonVariants()}>+ Novo chamado</Link>

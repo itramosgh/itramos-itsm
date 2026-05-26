@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { TaskList } from '@/components/tarefas/TaskList'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import { AutoRefresh } from '@/components/ui/AutoRefresh'
 
 export default async function TarefasPage({
   searchParams,
@@ -25,6 +26,7 @@ export default async function TarefasPage({
 
   return (
     <div className="space-y-4">
+      <AutoRefresh intervalSeconds={30} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Tarefas</h1>
         <Link href="/tarefas/nova" className={buttonVariants()}>Nova Tarefa</Link>
