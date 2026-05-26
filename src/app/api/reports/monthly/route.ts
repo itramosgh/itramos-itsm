@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const [
     { data: companyData },
     { data: settingsData },
-    { data: ticketsRaw },
+    { data: ticketsRaw, error: ticketsError },
     { data: meetingsRaw },
     { data: gmudsRaw },
     { data: monitoringRaw },
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     supabase.from('platform_settings').select('logo_light_url').single(),
     supabase
       .from('tickets')
-      .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, category_id')
+      .select('number, title, status, priority, created_at, closed_at, assigned_to, category_id')
       .eq('company_id', companyId)
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`)
@@ -58,7 +58,9 @@ export async function GET(request: Request) {
       .in('channel', ['zabbix', 'azure_monitor', 'url_monitoring'])
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`),
-  ]) as [{ data: any }, { data: any }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
+  ]) as any[]
+
+  console.log('[monthly-report] tickets count:', ticketsRaw?.length ?? 0, '| error:', ticketsError?.message ?? 'none', '| monitoring count:', monitoringRaw?.length ?? 0, '| companyId:', companyId, '| range:', from, '-', to)
 
   const companyName: string = companyData?.name ?? 'Cliente'
   const logoUrl: string | null = (settingsData as any)?.logo_light_url ?? null
@@ -85,7 +87,7 @@ export async function GET(request: Request) {
     created_at: t.created_at,
     closed_at: t.closed_at ?? null,
     analyst_name: analystMap[t.assigned_to] ?? '—',
-    reopened: (t.reopen_count ?? 0) > 0,
+    reopened: t.status === 'reaberto',
   }))
 
   const meetings: ReportMeeting[] = (meetingsRaw ?? []).map((m: any) => ({

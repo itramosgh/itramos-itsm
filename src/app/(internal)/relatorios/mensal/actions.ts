@@ -24,7 +24,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     supabase.from('platform_settings').select('logo_light_url, email_from_name, email_from_address').single(),
     supabase
       .from('tickets')
-      .select('number, title, status, priority, created_at, closed_at, reopen_count, assigned_to, category_id')
+      .select('number, title, status, priority, created_at, closed_at, assigned_to, category_id')
       .eq('company_id', companyId)
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`)
@@ -78,7 +78,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     created_at: t.created_at,
     closed_at: t.closed_at ?? null,
     analyst_name: analystMap[t.assigned_to] ?? '—',
-    reopened: (t.reopen_count ?? 0) > 0,
+    reopened: t.status === 'reaberto',
   }))
 
   const meetings: ReportMeeting[] = (meetingsRaw ?? []).map((m: any) => ({
