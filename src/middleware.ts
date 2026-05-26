@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  const role = (profile?.role as string) ?? 'cliente'
+  // If profile query fails, allow through — page-level auth handles it
+  if (!profile) return response
+
+  const role = profile.role as string
   const redirect = getRedirectForRole(role, pathname)
   if (redirect) {
     return NextResponse.redirect(new URL(redirect, request.url))
