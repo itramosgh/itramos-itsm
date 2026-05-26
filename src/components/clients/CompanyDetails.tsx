@@ -119,7 +119,7 @@ export function CompanyDetails({ company }: Props) {
         {domainError && <p className="text-sm text-destructive">{domainError}</p>}
       </div>
 
-      {/* Navigation to Contacts/Contracts */}
+      {/* Navigation to sub-sections */}
       <div className="flex gap-4">
         <Link href={`/clientes/${company.id}/contatos`}
           className="flex-1 rounded-lg border p-4 hover:bg-muted text-center">
@@ -130,6 +130,11 @@ export function CompanyDetails({ company }: Props) {
           className="flex-1 rounded-lg border p-4 hover:bg-muted text-center">
           <p className="font-medium">Contratos</p>
           <p className="text-sm text-muted-foreground">Gerenciar contratos desta empresa</p>
+        </Link>
+        <Link href={`/clientes/${company.id}/monitoramento`}
+          className="flex-1 rounded-lg border p-4 hover:bg-muted text-center">
+          <p className="font-medium">Monitoramento</p>
+          <p className="text-sm text-muted-foreground">URLs e integrações de monitoramento</p>
         </Link>
       </div>
     </div>
