@@ -24,6 +24,7 @@ export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoP
   const [blocked, setBlocked] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadStartedRef = useRef(false)
   const router = useRouter()
 
   // Quando o ticket for criado com sucesso, fazer upload dos arquivos e navegar
@@ -31,16 +32,24 @@ export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoP
     if (!state || !('ticketId' in state)) return
 
     async function uploadAndRedirect() {
+      if (uploadStartedRef.current) return
+      uploadStartedRef.current = true
       const ticketId = (state as { ticketId: string }).ticketId
       const files = fileInputRef.current?.files
       if (files && files.length > 0) {
         setUploading(true)
+        const failedFiles: string[] = []
         for (const file of Array.from(files)) {
           const fd = new FormData()
           fd.append('file', file)
           fd.append('ticket_id', ticketId)
-          await fetch('/api/upload/attachment', { method: 'POST', body: fd })
+          const res = await fetch('/api/upload/attachment', { method: 'POST', body: fd })
+          if (!res.ok) failedFiles.push(file.name)
         }
+        if (failedFiles.length > 0) {
+          window.alert(`Chamado aberto! Alguns arquivos não puderam ser enviados: ${failedFiles.join(', ')}`)
+        }
+        setUploading(false)
       }
       router.push('/portal/chamados')
     }
