@@ -15,16 +15,25 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   ])
 
   let contactName: string | null = null
+  let isContractResponsible = false
   if (user) {
     const { data: contact } = await supabase
       .from('contacts')
-      .select('full_name')
+      .select('full_name, is_contract_responsible')
       .eq('user_id', user.id)
-      .single() as { data: { full_name: string } | null }
+      .single() as { data: { full_name: string; is_contract_responsible: boolean } | null }
     contactName = contact?.full_name ?? null
+    isContractResponsible = contact?.is_contract_responsible ?? false
   }
 
   const isPortalUser = !!user && !!contactName
+
+  const navItems = [
+    { href: '/portal/chamados', label: 'Chamados', restricted: false },
+    { href: '/portal/mudancas', label: 'Mudanças', restricted: true },
+    { href: '/portal/conhecimento', label: 'Conhecimento', restricted: false },
+    { href: '/portal/relatorios', label: 'Relatórios', restricted: true },
+  ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,20 +48,17 @@ export default async function PortalLayout({ children }: { children: ReactNode }
                 }
               </Link>
               <div className="flex items-center gap-1">
-                {[
-                  { href: '/portal/chamados', label: 'Chamados' },
-                  { href: '/portal/mudancas', label: 'Mudanças' },
-                  { href: '/portal/conhecimento', label: 'Conhecimento' },
-                  { href: '/portal/relatorios', label: 'Relatórios' },
-                ].map(({ href, label }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  >
-                    {label}
-                  </Link>
-                ))}
+                {navItems
+                  .filter(item => !item.restricted || isContractResponsible)
+                  .map(({ href, label }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      {label}
+                    </Link>
+                  ))}
               </div>
             </div>
             <div className="flex items-center gap-3">

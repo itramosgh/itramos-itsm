@@ -20,11 +20,12 @@ export default async function PortalMudancasPage() {
 
   const { data: contact } = await supabase
     .from('contacts')
-    .select('company_id')
+    .select('company_id, is_contract_responsible')
     .eq('user_id', user.id)
-    .single() as { data: { company_id: string } | null }
+    .single() as { data: { company_id: string; is_contract_responsible: boolean } | null }
 
   if (!contact) notFound()
+  if (!contact.is_contract_responsible) notFound()
 
   const { data: changes } = await supabase
     .from('change_requests')

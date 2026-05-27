@@ -7,6 +7,14 @@ export default async function PortalRelatoriosPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('is_contract_responsible')
+    .eq('user_id', user.id)
+    .single() as { data: { is_contract_responsible: boolean } | null }
+
+  if (!contact?.is_contract_responsible) notFound()
+
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Relatórios</h1>

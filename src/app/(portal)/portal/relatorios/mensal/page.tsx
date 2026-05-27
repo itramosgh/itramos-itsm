@@ -15,11 +15,12 @@ export default async function PortalRelatorioMensalPage({
 
   const { data: contact } = await supabase
     .from('contacts')
-    .select('company_id, companies(name)')
+    .select('company_id, is_contract_responsible, companies(name)')
     .eq('user_id', user.id)
-    .single() as { data: { company_id: string; companies: { name: string } | null } | null }
+    .single() as { data: { company_id: string; is_contract_responsible: boolean; companies: { name: string } | null } | null }
 
   if (!contact) notFound()
+  if (!contact.is_contract_responsible) notFound()
 
   const prev = getPreviousMonthRange(new Date())
   const fromDate = from ?? prev.from

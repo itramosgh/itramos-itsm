@@ -12,23 +12,34 @@ export default async function PortalChamadosPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: contact } = await supabase
     .from('contacts')
-    .select('id, company_id, full_name')
+    .select('id, company_id, full_name, is_contract_responsible')
     .eq('user_id', user!.id)
     .single() as { data: any }
 
   if (!contact) return <p>Perfil não encontrado.</p>
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: tickets } = await supabase
+  const isResponsible = !!contact.is_contract_responsible
+
+  let query = supabase
     .from('tickets')
     .select('id, number, title, status, priority, created_at')
     .eq('company_id', contact.company_id)
-    .order('created_at', { ascending: false }) as { data: any[] | null }
+    .order('created_at', { ascending: false })
+
+  // Contatos não responsáveis veem apenas seus próprios chamados
+  if (!isResponsible) {
+    query = query.eq('contact_id', contact.id) as any
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tickets } = await query as { data: any[] | null }
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Meus Chamados</h1>
+        <h1 className="text-2xl font-semibold">
+          {isResponsible ? 'Chamados da Empresa' : 'Meus Chamados'}
+        </h1>
         <Link href="/portal/chamados/novo" className={buttonVariants()}>+ Novo chamado</Link>
       </div>
       <div className="space-y-2">
