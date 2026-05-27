@@ -1,6 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { loginSchema } from '@/lib/validations/auth'
 
 export async function loginAction(prevState: { error: string } | null, formData: FormData) {
@@ -11,8 +11,23 @@ export async function loginAction(prevState: { error: string } | null, formData:
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
+  const { data: authData, error } = await supabase.auth.signInWithPassword(parsed.data)
   if (error) return { error: 'E-mail ou senha incorretos' }
+
+  // Verificar se é usuário interno (tem perfil) ou cliente do portal
+  if (authData.user) {
+    const serviceSupabase = await createServiceClient()
+    const { data: profile } = await serviceSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single()
+
+    if (!profile) {
+      // Usuário de portal (contato) — vai direto para chamados
+      redirect('/portal/chamados')
+    }
+  }
 
   redirect('/dashboard')
 }

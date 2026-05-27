@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { logoutAction } from '@/app/(auth)/login/actions'
 import type { Database } from '@/types/database'
 import type { ReactNode } from 'react'
@@ -8,8 +8,9 @@ type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
+  const serviceSupabase = await createServiceClient()
   const [{ data: settings }, { data: { user } }] = await Promise.all([
-    supabase.from('platform_settings').select('logo_light_url, company_name, company_whatsapp').single() as unknown as Promise<{ data: PlatformSettings | null }>,
+    serviceSupabase.from('platform_settings').select('*').single() as unknown as Promise<{ data: PlatformSettings | null }>,
     supabase.auth.getUser(),
   ])
 
