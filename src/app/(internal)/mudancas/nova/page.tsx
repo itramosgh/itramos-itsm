@@ -13,7 +13,8 @@ export default async function NovaMudancaPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: analysts }, { data: contacts }] = await Promise.all([
+  const [{ data: profile }, { data: analysts }, { data: contacts }] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', user.id).single() as unknown as Promise<{ data: any }>,
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
     supabase.from('contacts').select('id, full_name, email').eq('is_active', true).order('full_name'),
   ])
@@ -26,6 +27,7 @@ export default async function NovaMudancaPage({
         allContacts={(contacts as any[]) ?? []}
         originTicketId={ticket_id}
         originTicketTitle={ticket_title ? decodeURIComponent(ticket_title) : undefined}
+        userRole={(profile as any)?.role ?? ''}
       />
     </div>
   )

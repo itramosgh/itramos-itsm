@@ -13,15 +13,19 @@ interface Props {
   allContacts: Array<{ id: string; full_name: string; email: string }>
   originTicketId?: string
   originTicketTitle?: string
+  userRole: string
 }
 
-export function ChangeRequestForm({ analysts, allContacts, originTicketId, originTicketTitle }: Props) {
+export function ChangeRequestForm({ analysts, allContacts, originTicketId, originTicketTitle, userRole }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [state, action, pending] = useActionState(createChangeRequestAction, null) as any
   const router = useRouter()
   const [files, setFiles] = useState<FileList | null>(null)
   const [uploading, setUploading] = useState(false)
   const uploadStartedRef = useRef(false)
+  const [isPreApproved, setIsPreApproved] = useState(false)
+
+  const canPreApprove = userRole === 'admin' || userRole === 'gestor'
 
   useEffect(() => {
     if (!state?.success || !state.id || uploadStartedRef.current) return
@@ -132,6 +136,39 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
         <NotificationContactsSelector dbContacts={allContacts} />
       </div>
 
+      {/* Pré-aprovação — visível apenas para admin/gestor */}
+      {canPreApprove && (
+        <div className="space-y-3 rounded-md border p-4 bg-muted/30">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="is_pre_approved"
+              name="is_pre_approved"
+              checked={isPreApproved}
+              onChange={(e) => setIsPreApproved(e.target.checked)}
+              className="h-4 w-4 rounded border"
+            />
+            <Label htmlFor="is_pre_approved" className="cursor-pointer font-medium">
+              GMUD pré-aprovada (pular envio de aprovação)
+            </Label>
+          </div>
+          {isPreApproved && (
+            <div className="space-y-2">
+              <Label htmlFor="pre_approval_email">
+                E-mail do responsável pela pré-aprovação *
+              </Label>
+              <Input
+                id="pre_approval_email"
+                name="pre_approval_email"
+                type="email"
+                placeholder="aprovador@empresa.com"
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="attachments">Anexos</Label>
         <Input
@@ -150,7 +187,13 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
 
       <div className="flex gap-3">
         <Button type="submit" disabled={pending || uploading}>
-          {uploading ? 'Enviando anexos…' : pending ? 'Salvando…' : 'Criar GMUD'}
+          {uploading
+            ? 'Enviando anexos…'
+            : pending
+            ? 'Salvando…'
+            : isPreApproved
+            ? 'Criar como aprovada'
+            : 'Criar GMUD'}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
