@@ -186,6 +186,7 @@ export interface Database {
           sla_deadline: string | null; sla_first_response_at: string | null
           sla_met: boolean | null; sla_breach_minutes: number | null
           sla_paused_at: string | null; sla_paused_minutes: number
+          sla_starts_at: string | null
           billing_status: 'pendente' | 'cobrado' | null
           resolution: string | null; closed_at: string | null
           created_at: string; updated_at: string
