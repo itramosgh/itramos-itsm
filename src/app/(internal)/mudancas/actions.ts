@@ -52,12 +52,13 @@ export async function createChangeRequestAction(_prevState: unknown, formData: F
   // Pré-aprovação: registrar em change_approvals sem enviar e-mail
   if (parsed.data.is_pre_approved && parsed.data.pre_approval_email) {
     const serviceSupabase = await createServiceClient()
-    await serviceSupabase.from('change_approvals').insert({
+    const { error: approvalError } = await serviceSupabase.from('change_approvals').insert({
       change_request_id: cr!.id,
       approver_email: parsed.data.pre_approval_email,
       status: 'aprovado',
       responded_at: new Date().toISOString(),
     } as never)
+    if (approvalError) return { error: approvalError.message }
   }
 
   if (notificationContacts.length > 0) {
