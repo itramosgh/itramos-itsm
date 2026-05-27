@@ -15,46 +15,51 @@ interface Ticket {
   sla_met: boolean | null; sla_paused_at: string | null; scheduled_at: string | null
   companies: { name: string } | null
   contacts: { full_name: string } | null
+  profiles: { full_name: string } | null
 }
 
 export function TicketList({ tickets }: { tickets: Ticket[] }) {
   return (
-    <div className="rounded-md border">
-      <table className="w-full text-sm">
+    <div className="rounded-md border overflow-x-auto">
+      <table className="w-full text-xs">
         <thead>
           <tr className="border-b bg-muted/50">
-            <th className="p-3 text-left">#</th>
-            <th className="p-3 text-left">Título</th>
-            <th className="p-3 text-left">Status</th>
-            <th className="p-3 text-left">Prioridade</th>
-            <th className="p-3 text-left">Empresa</th>
-            <th className="p-3 text-left">SLA</th>
-            <th className="p-3 text-left">Aberto em</th>
+            <th className="px-3 py-2 text-left font-medium">#</th>
+            <th className="px-3 py-2 text-left font-medium">Título</th>
+            <th className="px-3 py-2 text-left font-medium">Status</th>
+            <th className="px-3 py-2 text-left font-medium">Prioridade</th>
+            <th className="px-3 py-2 text-left font-medium">Empresa</th>
+            <th className="px-3 py-2 text-left font-medium">Analista</th>
+            <th className="px-3 py-2 text-left font-medium">SLA</th>
+            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Aberto em</th>
           </tr>
         </thead>
         <tbody>
           {tickets.map((t) => (
             <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors">
-              <td className="p-3 font-mono text-xs">#{t.number}</td>
-              <td className="p-3">
-                <Link href={`/chamados/${t.id}`} className="hover:underline font-medium">{t.title}</Link>
+              <td className="px-3 py-2 font-mono text-xs text-muted-foreground">#{t.number}</td>
+              <td className="px-3 py-2 max-w-[260px]">
+                <Link href={`/chamados/${t.id}`} className="hover:underline font-medium text-sm leading-snug line-clamp-2">{t.title}</Link>
                 {t.scheduled_at && (
                   <p className="text-xs text-blue-600 mt-0.5">
-                    📅 Agendado: {fmtDateTimeShort(t.scheduled_at)}
+                    📅 {fmtDateTimeShort(t.scheduled_at)}
                   </p>
                 )}
               </td>
-              <td className="p-3"><TicketStatusBadge status={t.status} /></td>
-              <td className="p-3 text-xs">{PRIORITY_LABELS[t.priority]}</td>
-              <td className="p-3 text-xs">{t.companies?.name ?? '—'}</td>
-              <td className="p-3">
+              <td className="px-3 py-2"><TicketStatusBadge status={t.status} /></td>
+              <td className="px-3 py-2 whitespace-nowrap">{PRIORITY_LABELS[t.priority]}</td>
+              <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{t.companies?.name ?? '—'}</td>
+              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                {t.profiles?.full_name ?? <span className="text-muted-foreground/50">—</span>}
+              </td>
+              <td className="px-3 py-2">
                 <SLAIndicator createdAt={t.created_at} slaStartsAt={t.sla_starts_at ?? null} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
               </td>
-              <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTimeShort(t.created_at)}</td>
+              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDateTimeShort(t.created_at)}</td>
             </tr>
           ))}
           {tickets.length === 0 && (
-            <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum chamado encontrado.</td></tr>
+            <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Nenhum chamado encontrado.</td></tr>
           )}
         </tbody>
       </table>
