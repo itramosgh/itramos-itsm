@@ -1,5 +1,6 @@
 'use server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { taskSchema, taskUpdateSchema } from '@/lib/validations/task'
 import { nextOccurrenceDate } from '@/lib/task-recurrence'
@@ -28,7 +29,7 @@ export async function createTaskAction(_prevState: unknown, formData: FormData) 
 
   if (error) return { error: error.message }
   revalidatePath('/tarefas')
-  return { success: true }
+  redirect('/tarefas')
 }
 
 export async function updateTaskAction(id: string, _prevState: unknown, formData: FormData) {
