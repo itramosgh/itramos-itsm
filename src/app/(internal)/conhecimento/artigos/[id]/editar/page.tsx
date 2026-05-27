@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { KbArticleForm } from '@/components/conhecimento/KbArticleForm'
+import { KbArticleAttachments } from '@/components/conhecimento/KbArticleAttachments'
 import { updateArticleAction } from '@/app/(internal)/conhecimento/actions'
 
 export default async function EditarArtigoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,13 +15,14 @@ export default async function EditarArtigoPage({ params }: { params: Promise<{ i
   if (!article) notFound()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Editar Artigo</h1>
       <KbArticleForm
         action={updateArticleAction.bind(null, id) as any}
         initialData={article}
         categories={categories ?? []}
       />
+      <KbArticleAttachments articleId={id} />
     </div>
   )
 }

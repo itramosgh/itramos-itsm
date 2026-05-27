@@ -4,7 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { INTERNAL_ROLES } from '@/lib/auth'
 
 // Buckets que usuários internos podem acessar
-const INTERNAL_BUCKETS = ['announcements', 'gmud-attachments', 'meeting-attachments', 'task-attachments']
+const INTERNAL_BUCKETS = ['announcements', 'gmud-attachments', 'meeting-attachments', 'task-attachments', 'kb-article-attachments']
 
 export async function GET(request: Request) {
   const supabase = await createClient()

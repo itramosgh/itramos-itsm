@@ -1,17 +1,21 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import { AttachmentList } from '@/components/tickets/AttachmentList'
 
 export default async function ArtigoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: article } = await supabase
-    .from('kb_articles')
-    .select('*')
-    .eq('id', id)
-    .single() as { data: any }
+  const serviceSupabase = await createServiceClient()
+  const [{ data: article }, { data: attachments }] = await Promise.all([
+    supabase.from('kb_articles').select('*').eq('id', id).single() as unknown as Promise<{ data: any }>,
+    serviceSupabase.from('kb_article_attachments')
+      .select('id, filename, storage_path, mime_type, size_bytes')
+      .eq('article_id', id)
+      .order('created_at') as unknown as Promise<{ data: any[] | null }>,
+  ])
 
   if (!article) notFound()
 
@@ -39,6 +43,11 @@ export default async function ArtigoPage({ params }: { params: Promise<{ id: str
         <section>
           <h2 className="text-lg font-medium mb-2">Solução aplicada</h2>
           <p className="whitespace-pre-wrap">{article.solution}</p>
+        </section>
+      )}
+      {(attachments ?? []).length > 0 && (
+        <section>
+          <AttachmentList attachments={attachments ?? []} bucket="kb-article-attachments" />
         </section>
       )}
     </div>

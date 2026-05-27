@@ -23,14 +23,14 @@ export async function createArticleAction(_prevState: unknown, formData: FormDat
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { error } = await supabase.from('kb_articles').insert({
+  const { data: article, error } = await supabase.from('kb_articles').insert({
     ...parsed.data,
     created_by: user!.id,
-  } as never)
+  } as never).select('id').single<{ id: string }>()
 
   if (error) return { error: error.message }
   revalidatePath('/conhecimento')
-  return { success: true }
+  return { success: true, articleId: article!.id }
 }
 
 export async function updateArticleAction(id: string, _prevState: unknown, formData: FormData) {
