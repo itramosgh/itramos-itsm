@@ -98,3 +98,9 @@ export async function stopRecurrenceAction(id: string) {
   await supabase.from('tasks').update({ recurrence_active: false } as never).eq('id', id)
   revalidatePath('/tarefas')
 }
+
+export async function deleteTaskAction(id: string) {
+  const supabase = await createClient()
+  await supabase.from('tasks').delete().eq('id', id)
+  revalidatePath('/tarefas')
+}

@@ -1,7 +1,8 @@
 'use client'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { completeTaskAction, stopRecurrenceAction } from '@/app/(internal)/tarefas/actions'
+import { completeTaskAction, stopRecurrenceAction, deleteTaskAction } from '@/app/(internal)/tarefas/actions'
 
 type Task = {
   id: string
@@ -30,6 +31,7 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="text-left px-4 py-3 font-medium">Título</th>
+            <th className="text-left px-4 py-3 font-medium">Cliente</th>
             <th className="text-left px-4 py-3 font-medium">Responsável</th>
             <th className="text-left px-4 py-3 font-medium">Vencimento</th>
             <th className="text-left px-4 py-3 font-medium">Status</th>
@@ -47,6 +49,7 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                     <span className="ml-2 text-xs text-muted-foreground">↻ recorrente</span>
                   )}
                 </td>
+                <td className="px-4 py-3 text-muted-foreground">{t.companies?.name ?? '—'}</td>
                 <td className="px-4 py-3 text-muted-foreground">{t.profiles?.full_name}</td>
                 <td className={`px-4 py-3 ${isOverdue ? 'text-destructive font-medium' : ''}`}>
                   {new Date(t.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
@@ -66,6 +69,20 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                         <Button variant="ghost" size="sm" type="submit">Parar recorrência</Button>
                       </form>
                     )}
+                    <Link href={`/tarefas/${t.id}/editar`}>
+                      <Button variant="ghost" size="sm">Editar</Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={async () => {
+                        if (!confirm('Excluir esta tarefa?')) return
+                        await deleteTaskAction(t.id)
+                      }}
+                    >
+                      Excluir
+                    </Button>
                   </div>
                 </td>
               </tr>
