@@ -1,4 +1,5 @@
 'use client'
+import { useActionState } from 'react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,10 +9,11 @@ import { KbSearchSuggestions } from '@/components/conhecimento/KbSearchSuggestio
 
 interface NovoChamadoPortalFormProps {
   categories: { id: string; name: string }[]
-  createAction: (formData: FormData) => Promise<void>
+  createAction: (prevState: { error: string } | null, formData: FormData) => Promise<{ error: string } | null>
 }
 
 export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoPortalFormProps) {
+  const [state, formAction, pending] = useActionState(createAction, null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [blocked, setBlocked] = useState(false)
@@ -29,7 +31,7 @@ export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoP
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <form action={createAction} className="space-y-4">
+      <form action={formAction} className="space-y-4">
         <div>
           <Label htmlFor="title">Título *</Label>
           <Input
@@ -79,7 +81,12 @@ export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoP
             </select>
           </div>
         )}
-        <Button type="submit">Abrir chamado</Button>
+        {state?.error && (
+          <p className="text-sm text-destructive">{state.error}</p>
+        )}
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Abrindo chamado...' : 'Abrir chamado'}
+        </Button>
       </form>
       <div>
         <KbSearchSuggestions query={searchQuery} onResolved={() => setBlocked(true)} />

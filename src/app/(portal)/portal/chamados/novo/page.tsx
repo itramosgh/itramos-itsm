@@ -1,14 +1,17 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ticketSchema } from '@/lib/validations/ticket'
 import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 import { NovoChamadoPortalForm } from './NovoChamadoPortalForm'
 
-async function createPortalTicketAction(formData: FormData) {
+async function createPortalTicketAction(
+  _prevState: { error: string } | null,
+  formData: FormData
+): Promise<{ error: string } | null> {
   'use server'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { error: 'Sessão expirada. Faça login novamente.' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: contact } = await supabase
@@ -17,7 +20,7 @@ async function createPortalTicketAction(formData: FormData) {
     .eq('user_id', user.id)
     .single() as { data: any }
 
-  if (!contact) return
+  if (!contact) return { error: 'Contato não encontrado.' }
 
   const parsed = ticketSchema.safeParse({
     title: formData.get('title'),
@@ -28,30 +31,36 @@ async function createPortalTicketAction(formData: FormData) {
     company_id: contact.company_id,
     contact_id: contact.id,
   })
-  if (!parsed.success) return
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { data: ticket } = await supabase
+  // Usa service client para bypassar RLS no insert
+  const serviceSupabase = await createServiceClient()
+
+  const { data: ticket, error: insertError } = await serviceSupabase
     .from('tickets')
     .insert(parsed.data as never)
     .select('id')
     .single<{ id: string }>()
 
-  if (ticket) {
-    try {
-      const sla = await calculateTicketSLAForCompany(supabase, {
-        companyId: contact.company_id,
-        priority: parsed.data.priority,
-        createdAt: new Date(),
-      })
-      if (sla) {
-        await supabase
-          .from('tickets')
-          .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at } as never)
-          .eq('id', ticket.id)
-      }
-    } catch {
-      // SLA calc failure doesn't block ticket creation
+  if (insertError || !ticket) {
+    console.error('Erro ao criar chamado portal:', insertError)
+    return { error: 'Erro ao abrir o chamado. Tente novamente.' }
+  }
+
+  try {
+    const sla = await calculateTicketSLAForCompany(serviceSupabase, {
+      companyId: contact.company_id,
+      priority: parsed.data.priority,
+      createdAt: new Date(),
+    })
+    if (sla) {
+      await serviceSupabase
+        .from('tickets')
+        .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at } as never)
+        .eq('id', ticket.id)
     }
+  } catch {
+    // SLA calc failure doesn't block ticket creation
   }
 
   redirect('/portal/chamados')
