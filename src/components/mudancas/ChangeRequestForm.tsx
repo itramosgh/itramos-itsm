@@ -20,6 +20,7 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
   const [state, action, pending] = useActionState(createChangeRequestAction, null) as any
   const router = useRouter()
   const [files, setFiles] = useState<FileList | null>(null)
+  const [uploading, setUploading] = useState(false)
   const uploadStartedRef = useRef(false)
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
     uploadStartedRef.current = true
 
     async function uploadAndNavigate() {
+      setUploading(true)
       if (files && files.length > 0) {
         for (const file of Array.from(files)) {
           const fd = new FormData()
@@ -40,6 +42,7 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
           }
         }
       }
+      setUploading(false)
       router.push(`/mudancas/${state!.id}`)
     }
 
@@ -146,8 +149,8 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? 'Salvando…' : 'Criar GMUD'}
+        <Button type="submit" disabled={pending || uploading}>
+          {uploading ? 'Enviando anexos…' : pending ? 'Salvando…' : 'Criar GMUD'}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
