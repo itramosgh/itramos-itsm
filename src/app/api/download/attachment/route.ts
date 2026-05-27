@@ -32,10 +32,13 @@ export async function GET(request: Request) {
       .from('profiles').select('role').eq('id', user.id).single()
     if (!profile || !INTERNAL_ROLES.includes((profile as any).role)) {
       // Usuário de portal: verificar que o ticket pertence à sua empresa
-      const [{ data: contact }, { data: ticket }] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [contactResult, ticketResult] = await Promise.all([
         serviceSupabase.from('contacts').select('company_id').eq('user_id', user.id).single(),
         serviceSupabase.from('tickets').select('company_id').eq('id', ticketId).single(),
       ])
+      const contact = contactResult.data as any
+      const ticket = ticketResult.data as any
       if (!contact?.company_id || !ticket?.company_id || contact.company_id !== ticket.company_id) {
         return NextResponse.json({ error: 'Sem acesso' }, { status: 403 })
       }
