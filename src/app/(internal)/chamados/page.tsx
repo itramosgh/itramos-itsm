@@ -4,13 +4,19 @@ import { TicketList } from '@/components/tickets/TicketList'
 import { AutoRefresh } from '@/components/ui/AutoRefresh'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Pagination } from '@/components/ui/Pagination'
+
+const PAGE_SIZE = 50
 
 export default async function ChamadosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; priority?: string; assigned_to?: string; company_id?: string }>
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; assigned_to?: string; company_id?: string; page?: string }>
 }) {
-  const { q, status, priority, assigned_to, company_id } = await searchParams
+  const { q, status, priority, assigned_to, company_id, page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
 
   const [{ data: allAnalysts }, { data: allCompanies }] = await Promise.all([
@@ -18,14 +24,14 @@ export default async function ChamadosPage({
     supabase.from('companies').select('id, name').eq('is_active', true).order('name'),
   ])
 
-  let query = supabase
+  let query: any = supabase
     .from('tickets')
-    .select('id, number, title, status, priority, created_at, sla_deadline, sla_first_response_at, sla_met, sla_paused_at, scheduled_at, companies(name), contacts(full_name)')
+    .select('id, number, title, status, priority, created_at, sla_deadline, sla_first_response_at, sla_met, sla_paused_at, scheduled_at, companies(name), contacts(full_name)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(100)
+    .range(offset, offset + PAGE_SIZE - 1)
 
-  if (status) query = query.eq('status', status as never)
-  if (priority) query = query.eq('priority', priority as never)
+  if (status) query = query.eq('status', status)
+  if (priority) query = query.eq('priority', priority)
   if (assigned_to) query = query.eq('assigned_to', assigned_to)
   if (company_id) query = query.eq('company_id', company_id)
   if (q) {
@@ -37,7 +43,7 @@ export default async function ChamadosPage({
     }
   }
 
-  const { data: tickets } = await query
+  const { data: tickets, count } = await query
 
   return (
     <div className="space-y-4">
@@ -83,6 +89,7 @@ export default async function ChamadosPage({
         <Button type="submit" variant="outline">Filtrar</Button>
       </form>
       <TicketList tickets={(tickets ?? []) as Parameters<typeof TicketList>[0]['tickets']} />
+      <Pagination page={page} total={count ?? 0} perPage={PAGE_SIZE} searchParams={{ q, status, priority, assigned_to, company_id }} />
     </div>
   )
 }

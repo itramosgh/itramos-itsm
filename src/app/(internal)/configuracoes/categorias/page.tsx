@@ -6,7 +6,8 @@ export default async function CategoriasPage() {
   const { data: categories } = (await supabase
     .from('ticket_categories')
     .select('id, name, slug, requires_approval, is_active')
-    .order('name')) as { data: any }
+    .order('name')
+    .limit(500)) as { data: any }
 
   return (
     <div className="space-y-6 max-w-3xl">

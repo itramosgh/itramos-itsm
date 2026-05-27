@@ -62,6 +62,7 @@ export default async function RelatorioPersonalizadoPage({
         .gte('created_at', `${fromDate}T00:00:00Z`)
         .lte('created_at', `${toDate}T23:59:59Z`)
         .order('created_at', { ascending: false })
+        .limit(2000)
 
       if (params.company_id)   q = q.eq('company_id', params.company_id)
       if (params.category_id)  q = q.eq('category_id', params.category_id)

@@ -42,7 +42,8 @@ export default async function CostReportPage({
     .not('ticket_costs', 'is', null)
     .gte('closed_at', `${fromDate}T00:00:00Z`)
     .lte('closed_at', `${toDate}T23:59:59Z`)
-    .order('closed_at', { ascending: false }) as any
+    .order('closed_at', { ascending: false })
+    .limit(2000) as any
 
   if (analyst_id) query = query.eq('assigned_to', analyst_id)
   if (company_id) query = query.eq('company_id', company_id)

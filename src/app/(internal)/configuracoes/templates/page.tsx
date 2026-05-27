@@ -9,7 +9,8 @@ export default async function TemplatesPage() {
   const { data: templates } = (await supabase
     .from('response_templates')
     .select('id, name, category, body, is_active, variables')
-    .order('name')) as { data: any }
+    .order('name')
+    .limit(500)) as { data: any }
 
   return (
     <div className="space-y-6">

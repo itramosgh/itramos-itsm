@@ -49,7 +49,8 @@ export default async function DashboardMudancasPage({
       .select('id, title, status, risk_level, created_at, execution_completed_at, reversal_reason, profiles!responsible_id(full_name)')
       .gte('created_at', `${fromDate}T00:00:00Z`)
       .lte('created_at', `${toDate}T23:59:59Z`)
-      .order('created_at', { ascending: false }) as any,
+      .order('created_at', { ascending: false })
+      .limit(2000) as any,
     supabase
       .from('change_requests')
       .select('id, title, status, risk_level, maintenance_start, maintenance_end, profiles!responsible_id(full_name)')

@@ -15,6 +15,7 @@ export default async function EmailTemplatesPage({
     .select('slug, category, name, is_customized, updated_at')
     .order('category')
     .order('name')
+    .limit(500)
 
   if (!templates) return <p className="p-6">Erro ao carregar templates.</p>
 

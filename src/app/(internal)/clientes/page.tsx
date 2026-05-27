@@ -1,18 +1,30 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { CreateCompanyDialog } from '@/components/clients/CreateCompanyDialog'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Database } from '@/types/database'
 
 type CompanyRow = Pick<Database['public']['Tables']['companies']['Row'], 'id' | 'name' | 'segment' | 'is_active' | 'is_blocked'>
 
-export default async function ClientesPage() {
-  const supabase = await createClient()
-  const { data: companiesRaw } = await supabase
-    .from('companies')
-    .select('id, name, segment, is_active, is_blocked')
-    .order('name')
+const PAGE_SIZE = 50
 
-  const companies = (companiesRaw ?? []) as unknown as CompanyRow[]
+export default async function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
+  const supabase = await createClient()
+  const { data: companiesRaw, count } = await supabase
+    .from('companies')
+    .select('id, name, segment, is_active, is_blocked', { count: 'exact' })
+    .order('name')
+    .range(offset, offset + PAGE_SIZE - 1) as { data: CompanyRow[] | null; count: number | null }
+
+  const companies = companiesRaw ?? []
 
   return (
     <div className="space-y-6">
@@ -32,7 +44,7 @@ export default async function ClientesPage() {
             </tr>
           </thead>
           <tbody>
-            {(companies ?? []).map((company) => (
+            {companies.map((company) => (
               <tr key={company.id} className="border-t hover:bg-muted/50">
                 <td className="px-4 py-2 font-medium">{company.name}</td>
                 <td className="px-4 py-2 text-muted-foreground">{company.segment ?? '—'}</td>
@@ -52,12 +64,13 @@ export default async function ClientesPage() {
                 </td>
               </tr>
             ))}
-            {(companies ?? []).length === 0 && (
+            {companies.length === 0 && (
               <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} total={count ?? 0} perPage={PAGE_SIZE} searchParams={{}} />
     </div>
   )
 }

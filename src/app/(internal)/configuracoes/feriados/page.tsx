@@ -16,7 +16,8 @@ export default async function FeriadosPage() {
   const { data: holidays } = (await supabase
     .from('holidays')
     .select('id, date, name, type')
-    .order('date')) as { data: any[] | null }
+    .order('date')
+    .limit(500)) as { data: any[] | null }
 
   return (
     <div className="space-y-6 max-w-2xl">

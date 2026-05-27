@@ -38,7 +38,8 @@ export default async function DashboardOperacionalPage({
       .from('tickets')
       .select('id, status, sla_met, sla_first_response_at, created_at, priority, category_id, assigned_to, company_id, ticket_categories(name), profiles!assigned_to(full_name), companies(name)')
       .gte('created_at', `${fromDate}T00:00:00Z`)
-      .lte('created_at', `${toDate}T23:59:59Z`) as any,
+      .lte('created_at', `${toDate}T23:59:59Z`)
+      .limit(2000) as any,
     supabase
       .from('tickets')
       .select('id, number, title, updated_at, companies(name), profiles!assigned_to(full_name)')

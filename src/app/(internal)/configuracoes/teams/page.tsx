@@ -7,6 +7,7 @@ export default async function TeamsConfigPage() {
     .from('teams_webhook_configs')
     .select('*')
     .order('created_at', { ascending: false })
+    .limit(500)
 
   return (
     <div className="space-y-6 max-w-4xl">

@@ -2,14 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { MeetingList } from '@/components/reunioes/MeetingList'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import { Pagination } from '@/components/ui/Pagination'
 
-export default async function ReunioesPage() {
+const PAGE_SIZE = 50
+
+export default async function ReunioesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: meetings } = await supabase
+  const { data: meetings, count } = await supabase
     .from('meetings')
-    .select('id, title, scheduled_at, status, companies(name)')
-    .order('scheduled_at', { ascending: false }) as { data: any[] | null }
+    .select('id, title, scheduled_at, status, companies(name)', { count: 'exact' })
+    .order('scheduled_at', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1) as { data: any[] | null; count: number | null }
 
   return (
     <div className="space-y-4">
@@ -18,6 +29,7 @@ export default async function ReunioesPage() {
         <Link href="/reunioes/nova" className={buttonVariants()}>Nova Reunião</Link>
       </div>
       <MeetingList meetings={meetings ?? []} />
+      <Pagination page={page} total={count ?? 0} perPage={PAGE_SIZE} searchParams={{}} />
     </div>
   )
 }

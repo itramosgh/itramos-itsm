@@ -3,20 +3,34 @@ import { KbArticleList } from '@/components/conhecimento/KbArticleList'
 import { KbDocumentList } from '@/components/conhecimento/KbDocumentList'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
+import { Pagination } from '@/components/ui/Pagination'
+
+const PAGE_SIZE = 50
 
 export default async function ConhecimentoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; page?: string }>
 }) {
-  const { tab } = await searchParams
+  const { tab, page: pageParam } = await searchParams
   const activeTab = tab === 'documentos' ? 'documentos' : 'artigos'
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
 
-  const [{ data: articles }, { data: documents }] = await Promise.all([
-    supabase.from('kb_articles').select('id, title, category_id, tags, is_active, created_at').order('created_at', { ascending: false }),
-    supabase.from('kb_documents').select('id, title, category, published_at, is_active, companies(name)').order('created_at', { ascending: false }),
-  ]) as [{ data: any[] | null }, { data: any[] | null }]
+  const [{ data: articles, count: articlesCount }, { data: documents, count: documentsCount }] = await Promise.all([
+    supabase.from('kb_articles')
+      .select('id, title, category_id, tags, is_active, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
+    supabase.from('kb_documents')
+      .select('id, title, category, published_at, is_active, companies(name)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
+  ]) as [{ data: any[] | null; count: number | null }, { data: any[] | null; count: number | null }]
+
+  const total = activeTab === 'artigos' ? (articlesCount ?? 0) : (documentsCount ?? 0)
 
   return (
     <div className="space-y-4">
@@ -47,6 +61,7 @@ export default async function ConhecimentoPage({
         ? <KbArticleList articles={articles ?? []} />
         : <KbDocumentList documents={documents ?? []} />
       }
+      <Pagination page={page} total={total} perPage={PAGE_SIZE} searchParams={{ tab }} />
     </div>
   )
 }

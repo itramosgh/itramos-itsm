@@ -57,7 +57,8 @@ export default async function DashboardMonitoramentoPage({
     .in('channel', MONITORING_CHANNELS)
     .gte('created_at', `${fromDate}T00:00:00Z`)
     .lte('created_at', `${toDate}T23:59:59Z`)
-    .order('created_at', { ascending: false }) as any
+    .order('created_at', { ascending: false })
+    .limit(2000) as any
 
   const tickets: any[] = ticketsRaw ?? []
 

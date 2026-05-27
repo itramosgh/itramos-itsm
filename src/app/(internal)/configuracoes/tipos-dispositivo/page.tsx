@@ -7,6 +7,7 @@ export default async function TiposDispositivoPage() {
     .from('device_types')
     .select('id, name, is_active')
     .order('name')
+    .limit(500)
 
   return (
     <div className="space-y-6 max-w-xl">
