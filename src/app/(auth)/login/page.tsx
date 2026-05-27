@@ -7,10 +7,10 @@ export default async function LoginPage() {
   const supabase = await createServiceClient()
   const { data: settings } = await supabase
     .from('platform_settings')
-    .select('app_name, logo_light_url')
-    .single() as { data: { app_name: string | null; logo_light_url: string | null } | null }
+    .select('company_name, logo_light_url')
+    .single() as { data: { company_name: string | null; logo_light_url: string | null } | null }
 
-  const appName = settings?.app_name || 'ITRAMOS ITSM'
+  const appName = settings?.company_name || 'ITRAMOS ITSM'
   const logoUrl = settings?.logo_light_url ?? null
 
   return (
@@ -23,7 +23,6 @@ export default async function LoginPage() {
           ) : (
             <h1 className="text-2xl font-semibold">{appName}</h1>
           )}
-          <p className="text-sm text-muted-foreground">Painel interno</p>
         </div>
         <LoginForm />
         <div className="relative">

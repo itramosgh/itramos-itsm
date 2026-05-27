@@ -30,6 +30,8 @@ export default async function DashboardPage() {
     .single() as { data: any }
 
   const now = new Date().toISOString()
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const todayStartISO = todayStart.toISOString()
   const next2Hours = new Date(Date.now() + 2 * 3600 * 1000).toISOString()
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
   const next14Days = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString()
@@ -66,7 +68,7 @@ export default async function DashboardPage() {
           ? supabase.from('meetings')
               .select('id, title, scheduled_at, companies(name)')
               .eq('status', 'agendada')
-              .gte('scheduled_at', now)
+              .gte('scheduled_at', todayStartISO)
               .lte('scheduled_at', nextWeek)
               .in('id', participantMeetingIds)
               .order('scheduled_at')
@@ -75,7 +77,7 @@ export default async function DashboardPage() {
       : supabase.from('meetings')
           .select('id, title, scheduled_at, companies(name)')
           .eq('status', 'agendada')
-          .gte('scheduled_at', now)
+          .gte('scheduled_at', todayStartISO)
           .lte('scheduled_at', nextWeek)
           .order('scheduled_at')
           .limit(5),
