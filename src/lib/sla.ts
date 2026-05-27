@@ -42,6 +42,38 @@ function nextBusinessDayStart(
   return next
 }
 
+export function getEffectiveSLAStart(
+  createdAt: Date,
+  is24x7: boolean,
+  settings: BusinessHoursSettings,
+  holidays: string[]
+): Date {
+  if (is24x7) return createdAt
+
+  const startTime = parseTime(settings.start)
+  const endTime = parseTime(settings.end)
+  const startMins = startTime.hours * 60 + startTime.minutes
+  const endMins = endTime.hours * 60 + endTime.minutes
+
+  if (!isBusinessDay(createdAt, settings, holidays)) {
+    return nextBusinessDayStart(createdAt, settings, holidays)
+  }
+
+  const currentMins = createdAt.getHours() * 60 + createdAt.getMinutes()
+
+  if (currentMins < startMins) {
+    const snapped = new Date(createdAt)
+    snapped.setHours(startTime.hours, startTime.minutes, 0, 0)
+    return snapped
+  }
+
+  if (currentMins >= endMins) {
+    return nextBusinessDayStart(createdAt, settings, holidays)
+  }
+
+  return createdAt
+}
+
 export function addBusinessHours(
   start: Date,
   hours: number,
@@ -115,11 +147,11 @@ export function getSLARemainingMinutes(
 }
 
 export function getSLAPercentUsed(
-  createdAt: Date,
+  slaStartsAt: Date,
   deadline: Date,
   pausedAt: Date | null
 ): number {
-  const totalMs = deadline.getTime() - createdAt.getTime()
+  const totalMs = deadline.getTime() - slaStartsAt.getTime()
   const remainingMs = getSLARemainingMinutes(deadline, pausedAt) * 60_000
   if (totalMs <= 0) return 100
   return Math.max(0, Math.min(100, Math.round(((totalMs - remainingMs) / totalMs) * 100)))
