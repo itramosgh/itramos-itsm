@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { TaskForm } from '@/components/tarefas/TaskForm'
+import { TaskAttachments } from '@/components/tarefas/TaskAttachments'
 import { updateTaskAction } from '@/app/(internal)/tarefas/actions'
 
 export default async function EditarTarefaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,7 @@ export default async function EditarTarefaPage({ params }: { params: Promise<{ i
         currentUserId={user!.id}
         isAnalista={isAnalista}
       />
+      <TaskAttachments taskId={id} />
     </div>
   )
 }
