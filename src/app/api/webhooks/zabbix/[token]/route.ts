@@ -4,6 +4,7 @@ import { isWithinMonitoringWindow, mapZabbixSeverity } from '@/lib/monitoring'
 import { insertLog } from '@/lib/log'
 import { notifyTeams } from '@/lib/teams'
 import { isValidTransition } from '@/lib/ticket-transitions'
+import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 
 interface ZabbixPayload {
   problem_type?: string
@@ -247,6 +248,21 @@ export async function POST(
   if (ticketError || !newTicket) {
     await insertLog(supabase, 'webhook_received', 'failure', 'Zabbix: erro ao criar chamado', { error: ticketError?.message })
     return NextResponse.json({ error: 'Erro ao criar chamado' }, { status: 500 })
+  }
+
+  // 8b. Calcular SLA (contrato ativo da empresa)
+  {
+    const sla = await calculateTicketSLAForCompany(supabase, {
+      companyId: integration.company_id,
+      priority,
+      createdAt: new Date(),
+    })
+    if (sla) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('tickets') as any)
+        .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at })
+        .eq('id', (newTicket as any).id)
+    }
   }
 
   await supabase.from('ticket_interactions').insert({
