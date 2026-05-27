@@ -34,6 +34,18 @@ export async function createChangeRequestAction(_prevState: unknown, formData: F
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Guard: only admin/gestor may pre-approve
+  if (parsed.data.is_pre_approved) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user!.id)
+      .single() as { data: any }
+    if (!['admin', 'gestor'].includes(profile?.role)) {
+      return { error: 'Sem permissão para pré-aprovar mudanças' }
+    }
+  }
+
   const insertStatus = parsed.data.is_pre_approved ? 'aprovada' : 'rascunho'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -27,7 +27,7 @@ export default async function NovaMudancaPage({
         allContacts={(contacts as any[]) ?? []}
         originTicketId={ticket_id}
         originTicketTitle={ticket_title ? decodeURIComponent(ticket_title) : undefined}
-        userRole={(profile as any)?.role ?? ''}
+        canPreApprove={['admin', 'gestor'].includes((profile as any)?.role)}
       />
     </div>
   )

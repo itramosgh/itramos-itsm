@@ -13,10 +13,10 @@ interface Props {
   allContacts: Array<{ id: string; full_name: string; email: string }>
   originTicketId?: string
   originTicketTitle?: string
-  userRole: string
+  canPreApprove: boolean
 }
 
-export function ChangeRequestForm({ analysts, allContacts, originTicketId, originTicketTitle, userRole }: Props) {
+export function ChangeRequestForm({ analysts, allContacts, originTicketId, originTicketTitle, canPreApprove }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [state, action, pending] = useActionState(createChangeRequestAction, null) as any
   const router = useRouter()
@@ -24,8 +24,6 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
   const [uploading, setUploading] = useState(false)
   const uploadStartedRef = useRef(false)
   const [isPreApproved, setIsPreApproved] = useState(false)
-
-  const canPreApprove = userRole === 'admin' || userRole === 'gestor'
 
   useEffect(() => {
     if (!state?.success || !state.id || uploadStartedRef.current) return
