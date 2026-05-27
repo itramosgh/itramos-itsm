@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,6 +15,10 @@ export async function POST(request: Request) {
 
   if (!file || !ticketId) {
     return NextResponse.json({ error: 'Arquivo e ticket_id são obrigatórios' }, { status: 400 })
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: 'Arquivo muito grande. Limite máximo: 10 MB.' }, { status: 400 })
   }
 
   const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
