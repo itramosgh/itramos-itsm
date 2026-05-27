@@ -44,14 +44,18 @@ export function AttachmentList({ attachments, bucket }: Props) {
         `/api/download/attachment?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(att.storage_path)}`
       )
       const data = await res.json()
-      if (data.url) {
-        const a = document.createElement('a')
-        a.href = data.url
-        a.download = att.filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+      if (!res.ok || !data.url) {
+        window.alert(data?.error ?? 'Erro ao baixar o arquivo. Tente novamente.')
+        return
       }
+      const a = document.createElement('a')
+      a.href = data.url
+      a.download = att.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch {
+      window.alert('Erro ao baixar o arquivo. Verifique sua conexão e tente novamente.')
     } finally {
       setLoading(null)
     }
