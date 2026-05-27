@@ -1,6 +1,5 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { taskSchema, taskUpdateSchema } from '@/lib/validations/task'
 import { nextOccurrenceDate } from '@/lib/task-recurrence'
@@ -22,14 +21,14 @@ export async function createTaskAction(_prevState: unknown, formData: FormData) 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('tasks').insert({
+  const { data: task, error } = await supabase.from('tasks').insert({
     ...parsed.data,
     created_by: user!.id,
-  } as never)
+  } as never).select('id').single<{ id: string }>()
 
   if (error) return { error: error.message }
   revalidatePath('/tarefas')
-  redirect('/tarefas')
+  return { taskId: task!.id }
 }
 
 export async function updateTaskAction(id: string, _prevState: unknown, formData: FormData) {

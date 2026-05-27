@@ -1,12 +1,12 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useState } from 'react'
 
-type ActionResult = { error?: string; success?: boolean } | null
+type ActionResult = { error?: string; success?: boolean; taskId?: string } | null
 
 interface TaskFormProps {
   action: (prevState: unknown, formData: FormData) => Promise<ActionResult>
@@ -30,6 +30,38 @@ interface TaskFormProps {
 export function TaskForm({ action, initialData, companies, profiles, currentUserId, isAnalista }: TaskFormProps) {
   const [state, formAction, pending] = useActionState(action, null)
   const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false)
+  const [files, setFiles] = useState<FileList | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const uploadStartedRef = useRef(false)
+  const router = useRouter()
+
+  const isEdit = !!initialData
+
+  useEffect(() => {
+    if (!state?.taskId || uploadStartedRef.current) return
+    uploadStartedRef.current = true
+
+    async function uploadAndNavigate() {
+      setUploading(true)
+      if (files && files.length > 0) {
+        for (const file of Array.from(files)) {
+          const fd = new FormData()
+          fd.append('file', file)
+          fd.append('task_id', state!.taskId!)
+          const res = await fetch('/api/upload/task', { method: 'POST', body: fd })
+          if (!res.ok) {
+            const data = await res.json()
+            window.alert(data?.error ?? 'Erro ao enviar anexo. Os outros arquivos serão ignorados.')
+            break
+          }
+        }
+      }
+      setUploading(false)
+      router.push('/tarefas')
+    }
+
+    uploadAndNavigate()
+  }, [state, files, router])
 
   return (
     <form action={formAction} className="space-y-4 max-w-xl">
@@ -124,9 +156,22 @@ export function TaskForm({ action, initialData, companies, profiles, currentUser
           </select>
         </div>
       )}
+      {!isEdit && (
+        <div>
+          <Label htmlFor="attachments">Anexos</Label>
+          <Input
+            id="attachments"
+            type="file"
+            multiple
+            onChange={e => setFiles(e.target.files)}
+            className="cursor-pointer"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Máximo 10 MB por arquivo</p>
+        </div>
+      )}
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Salvando...' : 'Salvar tarefa'}
+      <Button type="submit" disabled={pending || uploading}>
+        {uploading ? 'Enviando anexos...' : pending ? 'Salvando...' : 'Salvar tarefa'}
       </Button>
     </form>
   )
