@@ -1,18 +1,69 @@
 import { createClient } from '@/lib/supabase/server'
+import { logoutAction } from '@/app/(auth)/login/actions'
 import type { Database } from '@/types/database'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
-  const { data: settings } = await supabase
-    .from('platform_settings')
-    .select('*')
-    .single() as { data: PlatformSettings | null; error: unknown }
+  const [{ data: settings }, { data: { user } }] = await Promise.all([
+    supabase.from('platform_settings').select('*').single() as unknown as Promise<{ data: PlatformSettings | null }>,
+    supabase.auth.getUser(),
+  ])
+
+  let contactName: string | null = null
+  if (user) {
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('full_name')
+      .eq('user_id', user.id)
+      .single() as { data: { full_name: string } | null }
+    contactName = contact?.full_name ?? null
+  }
+
+  const isPortalUser = !!user && !!contactName
 
   return (
     <div className="min-h-screen bg-background">
+      {isPortalUser && (
+        <nav className="border-b bg-card">
+          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              {settings?.logo_light_url && (
+                <Link href="/portal/chamados">
+                  <img src={settings.logo_light_url} alt="Logo" className="h-8 w-auto object-contain" />
+                </Link>
+              )}
+              <div className="flex items-center gap-1">
+                {[
+                  { href: '/portal/chamados', label: 'Chamados' },
+                  { href: '/portal/mudancas', label: 'Mudanças' },
+                  { href: '/portal/conhecimento', label: 'Conhecimento' },
+                  { href: '/portal/relatorios', label: 'Relatórios' },
+                ].map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:block">{contactName}</span>
+              <form action={logoutAction}>
+                <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
+                  Sair
+                </button>
+              </form>
+            </div>
+          </div>
+        </nav>
+      )}
       {children}
       {settings?.company_whatsapp && (
         <a
