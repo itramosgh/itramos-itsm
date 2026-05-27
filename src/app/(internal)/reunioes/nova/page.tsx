@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MeetingForm } from '@/components/reunioes/MeetingForm'
+import { createMeetingAction } from '../actions'
 
 export default async function NovaReuniaoPage() {
   const supabase = await createClient()
@@ -13,7 +14,7 @@ export default async function NovaReuniaoPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Nova Reunião</h1>
-      <MeetingForm companies={companies ?? []} profiles={profiles ?? []} contacts={contacts ?? []} />
+      <MeetingForm action={createMeetingAction} companies={companies ?? []} profiles={profiles ?? []} contacts={contacts ?? []} />
     </div>
   )
 }

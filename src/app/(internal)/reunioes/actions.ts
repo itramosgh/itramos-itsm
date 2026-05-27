@@ -72,6 +72,52 @@ export async function createMeetingAction(data: {
   return { success: true, id: meetingId }
 }
 
+export async function updateMeetingAction(meetingId: string, data: {
+  company_id: string
+  title: string
+  scheduled_at: string
+  notes_html?: string
+  notes_rich_text?: object | null
+  participants: Array<
+    | { type: 'profile'; profile_id: string }
+    | { type: 'contact'; contact_id: string }
+    | { type: 'external'; external_email: string; external_name: string }
+  >
+  action_items: Array<unknown>
+}) {
+  const supabase = await createClient()
+
+  await supabase.from('meetings').update({
+    company_id: data.company_id,
+    title: data.title,
+    scheduled_at: new Date(data.scheduled_at).toISOString(),
+    notes_html: data.notes_html,
+    notes_rich_text: data.notes_rich_text as never,
+  } as never).eq('id', meetingId)
+
+  await supabase.from('meeting_participants').delete().eq('meeting_id', meetingId)
+  if (data.participants.length > 0) {
+    const rows = data.participants.map(p => {
+      if (p.type === 'profile') return { meeting_id: meetingId, profile_id: p.profile_id }
+      if (p.type === 'contact') return { meeting_id: meetingId, contact_id: p.contact_id }
+      return { meeting_id: meetingId, external_email: p.external_email, external_name: p.external_name }
+    })
+    await supabase.from('meeting_participants').insert(rows as never)
+  }
+
+  revalidatePath(`/reunioes/${meetingId}`)
+  revalidatePath('/reunioes')
+  return { success: true, id: meetingId }
+}
+
+export async function deleteMeetingAction(meetingId: string) {
+  const supabase = await createClient()
+  await supabase.from('meeting_participants').delete().eq('meeting_id', meetingId)
+  await supabase.from('meeting_action_items').delete().eq('meeting_id', meetingId)
+  await supabase.from('meetings').delete().eq('id', meetingId)
+  revalidatePath('/reunioes')
+}
+
 export async function updateMeetingNotesAction(meetingId: string, notesHtml: string, notesRichText: object | null) {
   const supabase = await createClient()
   await supabase.from('meetings').update({

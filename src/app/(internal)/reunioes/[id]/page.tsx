@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ActionItemsPanel } from '@/components/reunioes/ActionItemsPanel'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import Link from 'next/link'
 import { updateMeetingStatusAction, sendMinutesAction } from '../actions'
 
 export default async function ReuniaoDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +38,12 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
             {new Date(meeting.scheduled_at).toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}
           </p>
         </div>
-        <Badge>{meeting.status}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge>{meeting.status}</Badge>
+          <Link href={`/reunioes/${id}/editar`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Editar
+          </Link>
+        </div>
       </div>
 
       {participants.length > 0 && (

@@ -5,14 +5,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createMeetingAction } from '@/app/(internal)/reunioes/actions'
 import { useRouter } from 'next/navigation'
-
-interface MeetingFormProps {
-  companies: { id: string; name: string }[]
-  profiles: { id: string; full_name: string }[]
-  contacts: { id: string; full_name: string; company_id: string }[]
-}
 
 type Participant =
   | { type: 'profile'; profile_id: string; label: string }
@@ -25,18 +18,58 @@ type ActionItem = {
   due_date: string | null
 }
 
-export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps) {
+type MeetingData = {
+  company_id: string
+  title: string
+  scheduled_at: string
+  notes_html?: string
+  notes_rich_text?: object | null
+  participants: Array<
+    | { type: 'profile'; profile_id: string }
+    | { type: 'contact'; contact_id: string }
+    | { type: 'external'; external_email: string; external_name: string }
+  >
+  action_items: Array<{
+    description: string
+    responsible_profile_id?: string | null
+    due_date?: string | null
+  }>
+}
+
+interface MeetingFormProps {
+  action: (data: MeetingData) => Promise<{ error?: string; success?: boolean; id?: string }>
+  initialData?: {
+    title?: string
+    company_id?: string
+    scheduled_at?: string
+    notes_rich_text?: any
+    notes_html?: string
+    participants?: Participant[]
+  }
+  companies: { id: string; name: string }[]
+  profiles: { id: string; full_name: string }[]
+  contacts: { id: string; full_name: string; company_id: string }[]
+}
+
+export function MeetingForm({ action, initialData, companies, profiles, contacts }: MeetingFormProps) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [participants, setParticipants] = useState<Participant[]>([])
+  const [participants, setParticipants] = useState<Participant[]>(initialData?.participants ?? [])
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
-  const [companyId, setCompanyId] = useState('')
+  const [companyId, setCompanyId] = useState(initialData?.company_id ?? '')
   const [extEmail, setExtEmail] = useState('')
   const [extName, setExtName] = useState('')
 
+  const isEdit = !!initialData
+
+  const scheduledAtValue = initialData?.scheduled_at
+    ? new Date(initialData.scheduled_at).toISOString().slice(0, 16)
+    : ''
+
   const editor = useEditor({
     extensions: [StarterKit],
+    content: initialData?.notes_rich_text ?? initialData?.notes_html ?? '',
     editorProps: { attributes: { class: 'prose prose-sm max-w-none min-h-[150px] p-3 focus:outline-none' } },
   })
 
@@ -69,7 +102,7 @@ export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps)
     setError(null)
 
     const fd = new FormData(e.currentTarget)
-    const data = {
+    const data: MeetingData = {
       company_id: fd.get('company_id') as string,
       title: fd.get('title') as string,
       scheduled_at: fd.get('scheduled_at') as string,
@@ -83,11 +116,12 @@ export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps)
       action_items: actionItems,
     }
 
-    const result = await createMeetingAction(data)
+    const result = await action(data)
     setPending(false)
 
     if (result.error) { setError(result.error); return }
     if (result.id) router.push(`/reunioes/${result.id}`)
+    else router.push('/reunioes')
   }
 
   const filteredContacts = companyId ? contacts.filter(c => c.company_id === companyId) : contacts
@@ -100,6 +134,7 @@ export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps)
           id="company_id"
           name="company_id"
           required
+          defaultValue={initialData?.company_id ?? ''}
           onChange={e => setCompanyId(e.target.value)}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
         >
@@ -109,11 +144,11 @@ export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps)
       </div>
       <div>
         <Label htmlFor="title">Pauta / Título *</Label>
-        <Input id="title" name="title" required />
+        <Input id="title" name="title" required defaultValue={initialData?.title} />
       </div>
       <div>
         <Label htmlFor="scheduled_at">Data e hora *</Label>
-        <Input id="scheduled_at" name="scheduled_at" type="datetime-local" required />
+        <Input id="scheduled_at" name="scheduled_at" type="datetime-local" required defaultValue={scheduledAtValue} />
       </div>
 
       {/* Participantes */}
@@ -177,52 +212,62 @@ export function MeetingForm({ companies, profiles, contacts }: MeetingFormProps)
               className={`px-2 py-1 text-sm rounded ${editor?.isActive('bold') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
               <strong>B</strong>
             </button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()}
+              className={`px-2 py-1 text-sm rounded ${editor?.isActive('italic') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+              <em>I</em>
+            </button>
             <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()}
               className={`px-2 py-1 text-sm rounded ${editor?.isActive('bulletList') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
-              Lista
+              • Lista
+            </button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              className={`px-2 py-1 text-sm rounded ${editor?.isActive('orderedList') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+              1. Lista
             </button>
           </div>
           <EditorContent editor={editor} />
         </div>
       </div>
 
-      {/* Itens de ação */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Itens de ação</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addActionItem}>+ Adicionar item</Button>
-        </div>
-        {actionItems.map((item, i) => (
-          <div key={i} className="flex gap-2 items-start border rounded p-3">
-            <Input
-              placeholder="Descrição da ação..."
-              value={item.description}
-              onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, description: e.target.value } : a))}
-              className="flex-1"
-            />
-            <select
-              className="border rounded-md px-2 py-2 text-sm bg-background"
-              value={item.responsible_profile_id ?? ''}
-              onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, responsible_profile_id: e.target.value || null } : a))}
-            >
-              <option value="">Responsável...</option>
-              {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-            </select>
-            <Input
-              type="date"
-              className="w-36"
-              value={item.due_date ?? ''}
-              onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, due_date: e.target.value || null } : a))}
-            />
-            <button type="button" onClick={() => setActionItems(prev => prev.filter((_, j) => j !== i))}
-              className="text-muted-foreground hover:text-destructive text-lg">&times;</button>
+      {/* Itens de ação — somente na criação */}
+      {!isEdit && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Itens de ação</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addActionItem}>+ Adicionar item</Button>
           </div>
-        ))}
-      </div>
+          {actionItems.map((item, i) => (
+            <div key={i} className="flex gap-2 items-start border rounded p-3">
+              <Input
+                placeholder="Descrição da ação..."
+                value={item.description}
+                onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, description: e.target.value } : a))}
+                className="flex-1"
+              />
+              <select
+                className="border rounded-md px-2 py-2 text-sm bg-background"
+                value={item.responsible_profile_id ?? ''}
+                onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, responsible_profile_id: e.target.value || null } : a))}
+              >
+                <option value="">Responsável...</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              </select>
+              <Input
+                type="date"
+                className="w-36"
+                value={item.due_date ?? ''}
+                onChange={e => setActionItems(prev => prev.map((a, j) => j === i ? { ...a, due_date: e.target.value || null } : a))}
+              />
+              <button type="button" onClick={() => setActionItems(prev => prev.filter((_, j) => j !== i))}
+                className="text-muted-foreground hover:text-destructive text-lg">&times;</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={pending}>
-        {pending ? 'Salvando...' : 'Criar reunião'}
+        {pending ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar reunião'}
       </Button>
     </form>
   )
