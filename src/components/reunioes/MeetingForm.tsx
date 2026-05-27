@@ -55,6 +55,7 @@ export function MeetingForm({ action, initialData, companies, profiles, contacts
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [files, setFiles] = useState<FileList | null>(null)
   const [participants, setParticipants] = useState<Participant[]>(initialData?.participants ?? [])
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [companyId, setCompanyId] = useState(initialData?.company_id ?? '')
@@ -117,9 +118,24 @@ export function MeetingForm({ action, initialData, companies, profiles, contacts
     }
 
     const result = await action(data)
-    setPending(false)
 
-    if (result.error) { setError(result.error); return }
+    if (result.error) { setError(result.error); setPending(false); return }
+
+    if (result.id && files && files.length > 0) {
+      for (const file of Array.from(files)) {
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('meeting_id', result.id)
+        const res = await fetch('/api/upload/meeting', { method: 'POST', body: fd })
+        if (!res.ok) {
+          const errData = await res.json()
+          window.alert(errData?.error ?? 'Erro ao enviar anexo. Os outros arquivos serão ignorados.')
+          break
+        }
+      }
+    }
+
+    setPending(false)
     if (result.id) router.push(`/reunioes/${result.id}`)
     else router.push('/reunioes')
   }
@@ -262,6 +278,20 @@ export function MeetingForm({ action, initialData, companies, profiles, contacts
                 className="text-muted-foreground hover:text-destructive text-lg">&times;</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {!isEdit && (
+        <div>
+          <Label htmlFor="attachments">Anexos</Label>
+          <Input
+            id="attachments"
+            type="file"
+            multiple
+            onChange={e => setFiles(e.target.files)}
+            className="cursor-pointer"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Máximo 10 MB por arquivo</p>
         </div>
       )}
 
