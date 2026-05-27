@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const path = `${taskId}/${safeFilename}`
+  const path = `${taskId}/${Date.now()}_${safeFilename}`
   const buffer = await file.arrayBuffer()
 
   const serviceSupabase = await createServiceClient()
