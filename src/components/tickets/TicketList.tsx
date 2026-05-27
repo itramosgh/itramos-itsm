@@ -10,9 +10,9 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 
 interface Ticket {
   id: string; number: number; title: string; status: TicketStatus
-  priority: TicketPriority; created_at: string; sla_deadline: string | null
-  sla_first_response_at: string | null; sla_met: boolean | null
-  sla_paused_at: string | null; scheduled_at: string | null
+  priority: TicketPriority; created_at: string; sla_starts_at: string | null
+  sla_deadline: string | null; sla_first_response_at: string | null
+  sla_met: boolean | null; sla_paused_at: string | null; scheduled_at: string | null
   companies: { name: string } | null
   contacts: { full_name: string } | null
 }
@@ -48,7 +48,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               <td className="p-3 text-xs">{PRIORITY_LABELS[t.priority]}</td>
               <td className="p-3 text-xs">{t.companies?.name ?? '—'}</td>
               <td className="p-3">
-                <SLAIndicator createdAt={t.created_at} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
+                <SLAIndicator createdAt={t.created_at} slaStartsAt={t.sla_starts_at ?? null} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
               </td>
               <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTimeShort(t.created_at)}</td>
             </tr>

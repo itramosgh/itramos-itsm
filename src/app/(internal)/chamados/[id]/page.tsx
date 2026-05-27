@@ -115,6 +115,7 @@ export default async function TicketDetailPage({
           <span className="text-muted-foreground">SLA:</span>{' '}
           <SLAIndicator
             createdAt={ticket.created_at}
+            slaStartsAt={ticket.sla_starts_at ?? null}
             slaDeadline={ticket.sla_deadline}
             slaFirstResponseAt={ticket.sla_first_response_at}
             slaMet={ticket.sla_met}

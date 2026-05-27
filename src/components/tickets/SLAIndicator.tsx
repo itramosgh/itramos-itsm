@@ -2,13 +2,14 @@ import { getSLARemainingMinutes, getSLAPercentUsed } from '@/lib/sla'
 
 interface Props {
   createdAt: string
+  slaStartsAt: string | null
   slaDeadline: string | null
   slaFirstResponseAt: string | null
   slaMet: boolean | null
   slaPausedAt: string | null
 }
 
-export function SLAIndicator({ createdAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt }: Props) {
+export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt }: Props) {
   if (!slaDeadline) return <span className="text-xs text-muted-foreground">Sem SLA</span>
 
   if (slaFirstResponseAt !== null) {
@@ -19,8 +20,9 @@ export function SLAIndicator({ createdAt, slaDeadline, slaFirstResponseAt, slaMe
     )
   }
 
+  const effectiveStart = slaStartsAt ?? createdAt
   const remaining = getSLARemainingMinutes(new Date(slaDeadline), slaPausedAt ? new Date(slaPausedAt) : null)
-  const pct = getSLAPercentUsed(new Date(createdAt), new Date(slaDeadline), slaPausedAt ? new Date(slaPausedAt) : null)
+  const pct = getSLAPercentUsed(new Date(effectiveStart), new Date(slaDeadline), slaPausedAt ? new Date(slaPausedAt) : null)
   const color = remaining < 0 ? 'bg-red-500' : pct >= 80 ? 'bg-yellow-500' : 'bg-green-500'
   const label = remaining < 0 ? `Atrasado ${Math.abs(remaining)}min` : remaining < 60 ? `${remaining}min restantes` : `${Math.floor(remaining / 60)}h restantes`
 

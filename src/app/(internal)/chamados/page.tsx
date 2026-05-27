@@ -26,7 +26,7 @@ export default async function ChamadosPage({
 
   let query: any = supabase
     .from('tickets')
-    .select('id, number, title, status, priority, created_at, sla_deadline, sla_first_response_at, sla_met, sla_paused_at, scheduled_at, companies(name), contacts(full_name)', { count: 'exact' })
+    .select('id, number, title, status, priority, created_at, sla_starts_at, sla_deadline, sla_first_response_at, sla_met, sla_paused_at, scheduled_at, companies(name), contacts(full_name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + PAGE_SIZE - 1)
 
