@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { saveBodyAction, sendAnnouncementAction } from '@/app/(internal)/comunicados/actions'
+import { AnnouncementAttachments } from '@/components/comunicados/AnnouncementAttachments'
 
 export function AnnouncementForm({ announcementId, initialBodyHtml = '', initialBodyRichText, readOnly = false }: {
   announcementId: string
@@ -75,6 +76,10 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
           )}
           <EditorContent editor={editor} />
         </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Anexos</Label>
+        <AnnouncementAttachments announcementId={announcementId} canEdit={!readOnly} />
       </div>
       {!readOnly && (
         <div className="flex gap-3 items-center">

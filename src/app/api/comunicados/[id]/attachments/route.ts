@@ -1,0 +1,18 @@
+import { NextResponse } from 'next/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const serviceSupabase = await createServiceClient()
+  const { data } = await serviceSupabase
+    .from('announcement_attachments')
+    .select('id, filename, storage_path, mime_type, size_bytes')
+    .eq('announcement_id', id)
+    .order('created_at')
+
+  return NextResponse.json({ attachments: data ?? [] })
+}
