@@ -15,6 +15,8 @@ import { changeStatusAction, closeTicketFormAction } from '../actions'
 import { VALID_TRANSITIONS } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 import { Button } from '@/components/ui/button'
+import { AttachmentList } from '@/components/tickets/AttachmentList'
+import type { AttachmentItem } from '@/components/tickets/AttachmentList'
 
 export default async function TicketDetailPage({
   params,
@@ -33,6 +35,7 @@ export default async function TicketDetailPage({
     { data: linkedGmuds },
     { data: costData },
     { data: categoriesRaw },
+    { data: attachmentsRaw },
   ] = await Promise.all([
     supabase.from('tickets').select(`
       *, companies(name), contacts(full_name, email),
@@ -51,12 +54,18 @@ export default async function TicketDetailPage({
       .limit(5),
     supabase.from('ticket_costs').select('*').eq('ticket_id', id).maybeSingle(),
     supabase.from('ticket_categories').select('id, name').eq('is_active', true).order('name'),
+    supabase.from('ticket_attachments')
+      .select('id, filename, storage_path, mime_type, size_bytes')
+      .eq('ticket_id', id)
+      .eq('is_deleted', false)
+      .order('created_at'),
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ticket = ticketRaw as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const interactions = interactionsRaw as any[]
+  const attachments: AttachmentItem[] = (attachmentsRaw ?? []) as AttachmentItem[]
 
   if (!ticket) notFound()
 
@@ -202,6 +211,12 @@ export default async function TicketDetailPage({
               </Button>
             </form>
           ))}
+        </div>
+      )}
+
+      {attachments.length > 0 && (
+        <div className="border rounded-md p-4">
+          <AttachmentList attachments={attachments} bucket="ticket-attachments" />
         </div>
       )}
 
