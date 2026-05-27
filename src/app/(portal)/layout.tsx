@@ -9,7 +9,7 @@ type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
   const [{ data: settings }, { data: { user } }] = await Promise.all([
-    supabase.from('platform_settings').select('app_name, logo_light_url, company_whatsapp').single() as unknown as Promise<{ data: PlatformSettings | null }>,
+    supabase.from('platform_settings').select('logo_light_url, company_name, company_whatsapp').single() as unknown as Promise<{ data: PlatformSettings | null }>,
     supabase.auth.getUser(),
   ])
 
@@ -34,7 +34,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
               <Link href="/portal/chamados">
                 {(settings as any)?.logo_light_url
                   ? <img src={(settings as any).logo_light_url} alt="Logo" className="h-8 w-auto object-contain max-w-[160px]" />
-                  : <span className="font-semibold text-sm">{(settings as any)?.app_name || 'Portal'}</span>
+                  : <span className="font-semibold text-sm">{(settings as any)?.company_name || 'Portal'}</span>
                 }
               </Link>
               <div className="flex items-center gap-1">
