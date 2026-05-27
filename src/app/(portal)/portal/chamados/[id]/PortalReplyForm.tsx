@@ -13,6 +13,7 @@ interface Props {
 export function PortalReplyForm({ ticketId }: Props) {
   const [state, formAction, pending] = useActionState(sendPortalReplyAction, null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -21,14 +22,19 @@ export function PortalReplyForm({ ticketId }: Props) {
     async function uploadFilesAndRefresh() {
       const files = fileInputRef.current?.files
       if (files && files.length > 0) {
+        const failedFiles: string[] = []
         for (const file of Array.from(files)) {
           const fd = new FormData()
           fd.append('file', file)
           fd.append('ticket_id', ticketId)
-          await fetch('/api/upload/attachment', { method: 'POST', body: fd })
+          const res = await fetch('/api/upload/attachment', { method: 'POST', body: fd })
+          if (!res.ok) failedFiles.push(file.name)
         }
-        if (fileInputRef.current) fileInputRef.current.value = ''
+        if (failedFiles.length > 0) {
+          window.alert(`Resposta enviada! Alguns arquivos não puderam ser enviados: ${failedFiles.join(', ')}`)
+        }
       }
+      if (formRef.current) formRef.current.reset()
       router.refresh()
     }
 
@@ -37,7 +43,7 @@ export function PortalReplyForm({ ticketId }: Props) {
   }, [state])
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form ref={formRef} action={formAction} className="space-y-3">
       <input type="hidden" name="ticket_id" value={ticketId} />
       <div className="space-y-1">
         <Label htmlFor="content">Responder</Label>
