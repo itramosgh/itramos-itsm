@@ -1,5 +1,7 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
+import { AttachmentList } from '@/components/tickets/AttachmentList'
+import type { AttachmentItem } from '@/components/tickets/AttachmentList'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -48,9 +50,20 @@ export function ChangeRequestDetail({ cr, companyContacts }: Props) {
   const [showApprovalForm, setShowApprovalForm] = useState(false)
   const [showReversalForm, setShowReversalForm] = useState(false)
   const [closeTicket, setCloseTicket] = useState(true)
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [fileError, setFileError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const status = cr.status as ChangeRequestStatus
   const risk = cr.risk_level as RiskLevel
   const riskColor: Record<RiskLevel, string> = { baixo: 'text-green-600', medio: 'text-yellow-600', alto: 'text-red-600' }
+
+  useEffect(() => {
+    fetch(`/api/gmud/${cr.id}/attachments`)
+      .then(r => r.json())
+      .then(d => setAttachments(d.attachments ?? []))
+      .catch(() => {})
+  }, [cr.id])
 
   async function handleIniciar() {
     startTransition(async () => {
@@ -102,6 +115,56 @@ export function ChangeRequestDetail({ cr, companyContacts }: Props) {
         <div><p className="font-medium">Sistemas impactados</p><p className="mt-1 text-muted-foreground">{cr.impacted_systems}</p></div>
         <div><p className="font-medium">Usuários impactados</p><p className="mt-1 text-muted-foreground">{cr.impacted_users}</p></div>
         <div><p className="font-medium">Plano de rollback</p><p className="mt-1 text-muted-foreground">{cr.rollback_plan}</p></div>
+      </div>
+
+      {/* Anexos */}
+      <div className="border rounded-md p-4 space-y-3">
+        <h3 className="text-sm font-medium">Anexos</h3>
+        <AttachmentList attachments={attachments} bucket="gmud-attachments" />
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              const files = e.target.files
+              if (!files) return
+              setUploadingFile(true)
+              setFileError('')
+              for (const file of Array.from(files)) {
+                const fd = new FormData()
+                fd.append('file', file)
+                fd.append('change_request_id', cr.id)
+                const res = await fetch('/api/upload/gmud', { method: 'POST', body: fd })
+                const data = await res.json()
+                if (!res.ok) {
+                  setFileError(data.error ?? 'Erro ao enviar arquivo')
+                  break
+                } else {
+                  setAttachments(prev => [...prev, {
+                    id: data.path,
+                    filename: file.name,
+                    storage_path: data.path,
+                    mime_type: file.type,
+                    size_bytes: file.size,
+                  }])
+                }
+              }
+              setUploadingFile(false)
+              if (fileInputRef.current) fileInputRef.current.value = ''
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploadingFile}
+            onClick={() => fileInputRef.current?.click()}
+            className="text-sm border rounded-md px-3 py-1.5 hover:bg-muted disabled:opacity-50"
+          >
+            {uploadingFile ? 'Enviando...' : '📎 Adicionar arquivo'}
+          </button>
+          {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+        </div>
       </div>
 
       {cr.change_request_contacts.length > 0 && (
