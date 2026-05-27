@@ -1,3 +1,4 @@
+'use client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { completeTaskAction, stopRecurrenceAction } from '@/app/(internal)/tarefas/actions'
@@ -56,12 +57,12 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-2 justify-end">
                     {t.status === 'pendente' && (
-                      <form action={completeTaskAction.bind(null, t.id)}>
+                      <form action={async () => { await completeTaskAction(t.id) }}>
                         <Button variant="ghost" size="sm" type="submit">Concluir</Button>
                       </form>
                     )}
                     {t.is_recurring && t.recurrence_active && (
-                      <form action={stopRecurrenceAction.bind(null, t.id)}>
+                      <form action={async () => { await stopRecurrenceAction(t.id) }}>
                         <Button variant="ghost" size="sm" type="submit">Parar recorrência</Button>
                       </form>
                     )}
