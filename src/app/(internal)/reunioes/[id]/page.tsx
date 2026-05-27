@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ActionItemsPanel } from '@/components/reunioes/ActionItemsPanel'
+import { MeetingAttachments } from '@/components/reunioes/MeetingAttachments'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
@@ -73,6 +74,8 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
       )}
 
       <ActionItemsPanel items={items ?? []} meetingId={id} />
+
+      <MeetingAttachments meetingId={id} />
 
       {meeting.status === 'agendada' && (
         <div className="flex gap-2">
