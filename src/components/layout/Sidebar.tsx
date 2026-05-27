@@ -101,10 +101,10 @@ export function Sidebar({ appName, logoUrl }: SidebarProps) {
 
   return (
     <aside className="w-64 border-r bg-background h-screen flex flex-col">
-      <div className="p-4 border-b flex items-center">
+      <div className="h-14 px-4 border-b flex items-center">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={appName ?? 'Logo'} className="h-12 w-auto object-contain max-w-[200px]" />
+          <img src={logoUrl} alt={appName ?? 'Logo'} className="h-9 w-auto object-contain max-w-[180px]" />
         ) : (
           <span className="font-semibold text-lg">{appName || 'ITRAMOS ITSM'}</span>
         )}
