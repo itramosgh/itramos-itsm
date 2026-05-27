@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { updateUserAction, deactivateUserAction, deleteUserAction, resendInviteAction } from '@/app/(internal)/usuarios/actions'
+import { fmtDateTime } from '@/lib/format-date'
 import { UserForm } from './UserForm'
 import type { Database } from '@/types/database'
 
@@ -70,6 +71,12 @@ export function UserList({ users }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">{user.full_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Último acesso:{' '}
+                  {(user as any).last_login_at
+                    ? fmtDateTime((user as any).last_login_at)
+                    : 'Nunca'}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
