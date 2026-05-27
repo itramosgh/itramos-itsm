@@ -29,7 +29,27 @@ async function createPortalTicketAction(formData: FormData) {
   })
   if (!parsed.success) return
 
-  await supabase.from('tickets').insert(parsed.data as never)
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .insert(parsed.data as never)
+    .select('id')
+    .single<{ id: string }>()
+
+  if (ticket) {
+    const { calculateTicketSLAForCompany } = await import('@/lib/ticket-sla')
+    const sla = await calculateTicketSLAForCompany(supabase, {
+      companyId: contact.company_id,
+      priority: parsed.data.priority,
+      createdAt: new Date(),
+    })
+    if (sla) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('tickets') as any)
+        .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at })
+        .eq('id', ticket.id)
+    }
+  }
+
   redirect('/portal/chamados')
 }
 
