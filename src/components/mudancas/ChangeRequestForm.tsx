@@ -1,7 +1,6 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,12 +19,32 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [state, action, pending] = useActionState(createChangeRequestAction, null) as any
   const router = useRouter()
+  const [files, setFiles] = useState<FileList | null>(null)
+  const uploadStartedRef = useRef(false)
 
   useEffect(() => {
-    if (state?.success && state.id) {
-      router.push(`/mudancas/${state.id}`)
+    if (!state?.success || !state.id || uploadStartedRef.current) return
+    uploadStartedRef.current = true
+
+    async function uploadAndNavigate() {
+      if (files && files.length > 0) {
+        for (const file of Array.from(files)) {
+          const fd = new FormData()
+          fd.append('file', file)
+          fd.append('change_request_id', state!.id!)
+          const res = await fetch('/api/upload/gmud', { method: 'POST', body: fd })
+          if (!res.ok) {
+            const errData = await res.json()
+            window.alert(errData?.error ?? 'Erro ao enviar anexo. Os outros arquivos serão ignorados.')
+            break
+          }
+        }
+      }
+      router.push(`/mudancas/${state!.id}`)
     }
-  }, [state, router])
+
+    uploadAndNavigate()
+  }, [state, files, router])
 
   return (
     <form action={action} className="space-y-6 max-w-2xl">
@@ -108,6 +127,18 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
       <div className="space-y-2">
         <Label>Contatos a comunicar (início e conclusão) *</Label>
         <NotificationContactsSelector dbContacts={allContacts} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="attachments">Anexos</Label>
+        <Input
+          id="attachments"
+          type="file"
+          multiple
+          onChange={e => setFiles(e.target.files)}
+          className="cursor-pointer"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Máximo 10 MB por arquivo</p>
       </div>
 
       {state?.error && (
