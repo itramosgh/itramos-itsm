@@ -56,12 +56,12 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-2 justify-end">
                     {t.status === 'pendente' && (
-                      <form action={async () => { await completeTaskAction(t.id) }}>
+                      <form action={completeTaskAction.bind(null, t.id)}>
                         <Button variant="ghost" size="sm" type="submit">Concluir</Button>
                       </form>
                     )}
                     {t.is_recurring && t.recurrence_active && (
-                      <form action={async () => { await stopRecurrenceAction(t.id) }}>
+                      <form action={stopRecurrenceAction.bind(null, t.id)}>
                         <Button variant="ghost" size="sm" type="submit">Parar recorrência</Button>
                       </form>
                     )}
