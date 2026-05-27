@@ -6,6 +6,9 @@ type Log = Database['public']['Tables']['system_logs']['Row']
 
 interface Props {
   logs: Log[]
+  total: number
+  page: number
+  perPage: number
 }
 
 const CATEGORIES = ['email_sent', 'email_received', 'webhook_received', 'url_monitoring', 'cron_job', 'approval', 'auth'] as const
@@ -14,15 +17,40 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('pt-BR')
 }
 
-export function SystemLogsTable({ logs }: Props) {
+export function SystemLogsTable({ logs, total, page, perPage }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
 
   function handleFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value) params.set(key, value)
     else params.delete(key)
+    params.delete('page')
     router.push(`?${params.toString()}`)
+  }
+
+  function goToPage(p: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', String(p))
+    router.push(`?${params.toString()}`)
+  }
+
+  const from = total === 0 ? 0 : (page - 1) * perPage + 1
+  const to = Math.min(page * perPage, total)
+
+  // Build visible page numbers: always show first, last, current ±2
+  function getPageNumbers(): (number | 'ellipsis')[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | 'ellipsis')[] = []
+    const around = new Set([1, totalPages, page - 1, page, page + 1].filter(p => p >= 1 && p <= totalPages))
+    let prev = 0
+    for (const p of [...around].sort((a, b) => a - b)) {
+      if (p - prev > 1) pages.push('ellipsis')
+      pages.push(p)
+      prev = p
+    }
+    return pages
   }
 
   return (
@@ -79,6 +107,44 @@ export function SystemLogsTable({ logs }: Props) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          {total === 0 ? 'Nenhum resultado' : `Mostrando ${from}–${to} de ${total}`}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="px-2 py-1 rounded border text-sm disabled:opacity-40 hover:bg-muted disabled:cursor-not-allowed"
+          >
+            ‹ Anterior
+          </button>
+          {getPageNumbers().map((p, i) =>
+            p === 'ellipsis' ? (
+              <span key={`e${i}`} className="px-1">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => goToPage(p)}
+                className={`w-8 h-8 rounded border text-sm ${
+                  p === page ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+          <button
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="px-2 py-1 rounded border text-sm disabled:opacity-40 hover:bg-muted disabled:cursor-not-allowed"
+          >
+            Próxima ›
+          </button>
+        </div>
       </div>
     </div>
   )
