@@ -27,16 +27,19 @@ async function sendPortalReplyAction(formData: FormData) {
 
   if (!contact) return
 
+  const { createServiceClient } = await import('@/lib/supabase/server')
+  const serviceSupabase = await createServiceClient()
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: ticket } = await supabase
+  const { data: ticket } = await serviceSupabase
     .from('tickets')
-    .select('status, company_id')
+    .select('status, company_id, number, title, assigned_to')
     .eq('id', ticketId)
     .single() as { data: any }
 
   if (!ticket || ticket.company_id !== contact.company_id) return
 
-  await supabase.from('ticket_interactions').insert({
+  await serviceSupabase.from('ticket_interactions').insert({
     ticket_id: ticketId,
     type: 'mensagem',
     content,
@@ -45,24 +48,17 @@ async function sendPortalReplyAction(formData: FormData) {
 
   // Se aguardando cliente → retomar em_andamento
   if (ticket.status === 'aguardando_cliente') {
-    await supabase.from('tickets').update({ status: 'em_andamento' } as never).eq('id', ticketId)
+    await serviceSupabase.from('tickets').update({ status: 'em_andamento' } as never).eq('id', ticketId)
   }
 
   // Notificar analista quando cliente responde via portal
   try {
-    const { data: ticketForNotif } = await supabase
-      .from('tickets')
-      .select('number, title, assigned_to')
-      .eq('id', ticketId)
-      .single()
-    const tn = ticketForNotif as any
+    const tn = ticket as any
     if (tn.assigned_to) {
-      const { createServiceClient } = await import('@/lib/supabase/server')
-      const serviceSupabase = await createServiceClient()
       const { resolveAnalystEmail } = await import('@/lib/email-notifications')
       const analystEmail = await resolveAnalystEmail(serviceSupabase, tn.assigned_to)
       if (analystEmail) {
-        const { data: contactData } = await supabase
+        const { data: contactData } = await serviceSupabase
           .from('contacts')
           .select('full_name')
           .eq('id', contact.id)
