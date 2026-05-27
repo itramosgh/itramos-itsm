@@ -14,7 +14,6 @@ export async function loginAction(prevState: { error: string } | null, formData:
   const { data: authData, error } = await supabase.auth.signInWithPassword(parsed.data)
   if (error) return { error: 'E-mail ou senha incorretos' }
 
-  // Verificar se é usuário interno (tem perfil) ou cliente do portal
   if (authData.user) {
     const serviceSupabase = await createServiceClient()
     const { data: profile } = await serviceSupabase
@@ -24,9 +23,19 @@ export async function loginAction(prevState: { error: string } | null, formData:
       .single()
 
     if (!profile) {
-      // Usuário de portal (contato) — vai direto para chamados
+      // Usuário de portal (contato) — registrar last_login_at em contacts
+      await serviceSupabase
+        .from('contacts')
+        .update({ last_login_at: new Date().toISOString() } as never)
+        .eq('user_id', authData.user.id)
       redirect('/portal/chamados')
     }
+
+    // Usuário interno — registrar last_login_at em profiles
+    await serviceSupabase
+      .from('profiles')
+      .update({ last_login_at: new Date().toISOString() } as never)
+      .eq('id', authData.user.id)
   }
 
   redirect('/dashboard')
