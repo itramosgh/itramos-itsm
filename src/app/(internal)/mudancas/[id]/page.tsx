@@ -17,7 +17,8 @@ export default async function MudancaDetailPage({ params }: { params: Promise<{ 
     .select(`
       *, profiles!responsible_id(full_name),
       origin_ticket:origin_ticket_id(number, title),
-      change_request_contacts(id, external_email, external_name, contacts(full_name, email))
+      change_request_contacts(id, external_email, external_name, contacts(full_name, email)),
+      change_approvals(approver_email, responded_at, status)
     `)
     .eq('id', id)
     .single() as { data: any }

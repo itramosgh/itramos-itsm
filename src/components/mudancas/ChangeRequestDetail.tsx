@@ -34,12 +34,16 @@ interface Props {
     rollback_plan: string; risk_level: string; status: string
     execution_started_at: string | null; execution_completed_at: string | null
     reversal_reason: string | null; origin_ticket_id: string | null
+    is_pre_approved: boolean
     profiles: { full_name: string } | null
     origin_ticket: { number: number; title: string } | null
     change_request_contacts: Array<{
       id: string; external_email: string | null; external_name: string | null
       contacts: { full_name: string; email: string } | null
     }>
+    change_approvals: Array<{
+      approver_email: string; responded_at: string | null; status: string
+    }> | null
   }
   companyContacts: Array<{ id: string; full_name: string; email: string }>
 }
@@ -56,6 +60,10 @@ export function ChangeRequestDetail({ cr, companyContacts }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const status = cr.status as ChangeRequestStatus
   const risk = cr.risk_level as RiskLevel
+  // Registro de pré-aprovação (primeiro com status 'aprovado')
+  const preApprovalRecord = cr.is_pre_approved
+    ? (cr.change_approvals ?? []).find(a => a.status === 'aprovado') ?? null
+    : null
   const riskColor: Record<RiskLevel, string> = { baixo: 'text-green-600', medio: 'text-yellow-600', alto: 'text-red-600' }
 
   useEffect(() => {
@@ -90,11 +98,27 @@ export function ChangeRequestDetail({ cr, companyContacts }: Props) {
         </div>
         <div className="flex flex-col items-end gap-2">
           <Badge variant={statusVariant[status]}>{statusLabel[status]}</Badge>
+            {cr.is_pre_approved && (
+              <Badge variant="secondary">Pré-aprovada</Badge>
+            )}
           <span className={`text-xs font-medium ${riskColor[risk]}`}>
             Risco {risk.charAt(0).toUpperCase() + risk.slice(1)}
           </span>
         </div>
       </div>
+
+      {/* Bloco informativo de pré-aprovação */}
+      {cr.is_pre_approved && preApprovalRecord && (
+        <div className="flex items-center gap-2 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2 text-green-800">
+          <span>✓</span>
+          <span>
+            Pré-aprovada por <strong>{preApprovalRecord.approver_email}</strong>
+            {preApprovalRecord.responded_at && (
+              <> em {new Date(preApprovalRecord.responded_at).toLocaleString('pt-BR')}</>
+            )}
+          </span>
+        </div>
+      )}
 
       {cr.origin_ticket && (
         <div className="text-sm bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
@@ -183,7 +207,7 @@ export function ChangeRequestDetail({ cr, companyContacts }: Props) {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {/* Ações por status */}
-      {status === 'rascunho' && (
+      {status === 'rascunho' && !cr.is_pre_approved && (
         <div className="space-y-3">
           {!showApprovalForm ? (
             <Button onClick={() => setShowApprovalForm(true)}>Enviar para Aprovação</Button>
