@@ -27,8 +27,13 @@ export async function middleware(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  // If profile query fails, allow through — page-level auth handles it
-  if (!profile) return response
+  // No profile = portal user (contact) — block internal routes
+  if (!profile) {
+    if (isInternalPath(pathname)) {
+      return NextResponse.redirect(new URL('/portal/chamados', request.url))
+    }
+    return response
+  }
 
   const role = profile.role as string
   const redirect = getRedirectForRole(role, pathname)
