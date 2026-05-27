@@ -32,6 +32,8 @@ export default async function DashboardPage() {
   const now = new Date().toISOString()
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
+  const todayDate = new Date().toISOString().slice(0, 10)
+  const next7DaysDate = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   const next2Hours = new Date(Date.now() + 2 * 3600 * 1000).toISOString()
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
   const next14Days = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString()
@@ -52,6 +54,7 @@ export default async function DashboardPage() {
 
   const [
     { data: overdueTasks },
+    { data: upcomingTasks },
     { data: upcomingMeetings },
     { data: upcomingGmuds },
     { data: pendingBilling },
@@ -63,6 +66,16 @@ export default async function DashboardPage() {
           .eq('status', 'vencida').eq('assigned_to', user!.id).order('due_date').limit(5)
       : supabase.from('tasks').select('id, title, due_date, companies(name), profiles!assigned_to(full_name)')
           .eq('status', 'vencida').order('due_date').limit(5),
+    // Tarefas pendentes vencendo nos próximos 7 dias
+    isAnalista
+      ? supabase.from('tasks').select('id, title, due_date, companies(name)')
+          .eq('status', 'pendente').eq('assigned_to', user!.id)
+          .gte('due_date', todayDate).lte('due_date', next7DaysDate)
+          .order('due_date').limit(10)
+      : supabase.from('tasks').select('id, title, due_date, companies(name), profiles!assigned_to(full_name)')
+          .eq('status', 'pendente')
+          .gte('due_date', todayDate).lte('due_date', next7DaysDate)
+          .order('due_date').limit(10),
     isAnalista
       ? (participantMeetingIds.length > 0
           ? supabase.from('meetings')
@@ -141,16 +154,18 @@ export default async function DashboardPage() {
     { data: any[] | null },
     { data: any[] | null },
     { data: any[] | null },
+    { data: any[] | null },
   ]
 
   const tasks = overdueTasks ?? []
+  const upcoming = upcomingTasks ?? []
   const meetings = upcomingMeetings ?? []
   const gmuds = upcomingGmuds ?? []
   const billing = pendingBilling ?? []
   const scheduled = scheduledTickets ?? []
   const recurrence = recurrenceAlerts ?? []
-  const isEmpty = tasks.length === 0 && meetings.length === 0 && gmuds.length === 0
-    && billing.length === 0 && scheduled.length === 0 && recurrence.length === 0
+  const isEmpty = tasks.length === 0 && upcoming.length === 0 && meetings.length === 0
+    && gmuds.length === 0 && billing.length === 0 && scheduled.length === 0 && recurrence.length === 0
 
   return (
     <div className="space-y-8 p-6">
@@ -224,6 +239,49 @@ export default async function DashboardPage() {
                     </Badge>
                   </a>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {/* Tarefas próximas (pendentes nos próximos 7 dias) */}
+          {upcoming.length > 0 && (
+            <section>
+              <h2 className="text-lg font-medium mb-3 flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                Tarefas próximas (7 dias)
+              </h2>
+              <div className="divide-y rounded-lg border border-yellow-200 bg-yellow-50">
+                {upcoming.map((task: any) => {
+                  const isToday = task.due_date === todayDate
+                  return (
+                    <div key={task.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href="/tarefas"
+                          className="font-medium text-sm hover:underline truncate block"
+                        >
+                          {task.title}
+                        </Link>
+                        <span className="text-xs text-muted-foreground">
+                          {(task.companies as any)?.name ?? '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {!isAnalista && (task.profiles as any)?.full_name && (
+                          <span className="text-xs text-muted-foreground">
+                            {(task.profiles as any).full_name}
+                          </span>
+                        )}
+                        <Badge
+                          variant={isToday ? 'destructive' : 'outline'}
+                          className={`whitespace-nowrap ${!isToday ? 'border-yellow-400 text-yellow-700 bg-yellow-50' : ''}`}
+                        >
+                          {isToday ? 'Vence hoje' : `Vence em ${formatDate(task.due_date)}`}
+                        </Badge>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </section>
           )}
