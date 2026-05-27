@@ -55,7 +55,7 @@ export function NovoChamadoPortalForm({ categories, createAction }: NovoChamadoP
           <select
             id="priority"
             name="priority"
-            defaultValue="media"
+            defaultValue="baixa"
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           >
             <option value="baixa">Baixa</option>

@@ -9,7 +9,7 @@ type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
   const [{ data: settings }, { data: { user } }] = await Promise.all([
-    supabase.from('platform_settings').select('*').single() as unknown as Promise<{ data: PlatformSettings | null }>,
+    supabase.from('platform_settings').select('app_name, logo_light_url, company_whatsapp').single() as unknown as Promise<{ data: PlatformSettings | null }>,
     supabase.auth.getUser(),
   ])
 
@@ -31,11 +31,12 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         <nav className="border-b bg-card">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
             <div className="flex items-center gap-6">
-              {settings?.logo_light_url && (
-                <Link href="/portal/chamados">
-                  <img src={settings.logo_light_url} alt="Logo" className="h-8 w-auto object-contain" />
-                </Link>
-              )}
+              <Link href="/portal/chamados">
+                {(settings as any)?.logo_light_url
+                  ? <img src={(settings as any).logo_light_url} alt="Logo" className="h-8 w-auto object-contain max-w-[160px]" />
+                  : <span className="font-semibold text-sm">{(settings as any)?.app_name || 'Portal'}</span>
+                }
+              </Link>
               <div className="flex items-center gap-1">
                 {[
                   { href: '/portal/chamados', label: 'Chamados' },
