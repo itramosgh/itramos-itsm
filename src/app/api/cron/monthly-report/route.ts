@@ -176,19 +176,30 @@ export async function GET(request: Request) {
         }) as any
       )
 
+      const pdfAttachment = [{
+        filename: `relatorio_${company.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${from}_${to}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      }]
+
       for (const contact of contacts) {
         await sendEmail({
           to: contact.email,
           subject: `Relatório Mensal ITRAMOS — ${period}`,
           from: emailFrom,
           html: `<p>Olá ${contact.full_name ?? ''},</p><p>Segue em anexo o relatório mensal de ${period} referente à empresa <strong>${company.name}</strong>.</p><p>Qualquer dúvida, entre em contato com nossa equipe.</p>`,
-          attachments: [{
-            filename: `relatorio_${company.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${from}_${to}.pdf`,
-            content: pdfBuffer,
-            contentType: 'application/pdf',
-          }],
+          attachments: pdfAttachment,
         })
       }
+
+      // Cópia interna
+      await sendEmail({
+        to: 'chamados@itramos.com.br',
+        subject: `[Cópia] Relatório Mensal — ${company.name} — ${period}`,
+        from: emailFrom,
+        html: `<p>Cópia do relatório mensal de ${period} enviado para <strong>${company.name}</strong>.</p>`,
+        attachments: pdfAttachment,
+      })
 
       sent++
     } catch (err: any) {
