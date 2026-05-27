@@ -1,17 +1,16 @@
-import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ticketSchema } from '@/lib/validations/ticket'
 import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 import { NovoChamadoPortalForm } from './NovoChamadoPortalForm'
 
 async function createPortalTicketAction(
-  _prevState: { error: string } | null,
+  _prevState: { ticketId: string } | { error: string } | null,
   formData: FormData
-): Promise<{ error: string } | null> {
+): Promise<{ ticketId: string } | { error: string }> {
   'use server'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sessão expirada. Faça login novamente.' }
+  if (!user) return { error: 'Sessão expirada. Faça login novamente.' } as { error: string }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: contact } = await supabase
@@ -20,7 +19,7 @@ async function createPortalTicketAction(
     .eq('user_id', user.id)
     .single() as { data: any }
 
-  if (!contact) return { error: 'Contato não encontrado.' }
+  if (!contact) return { error: 'Contato não encontrado.' } as { error: string }
 
   const parsed = ticketSchema.safeParse({
     title: formData.get('title'),
@@ -31,7 +30,7 @@ async function createPortalTicketAction(
     company_id: contact.company_id,
     contact_id: contact.id,
   })
-  if (!parsed.success) return { error: parsed.error.issues[0].message }
+  if (!parsed.success) return { error: parsed.error.issues[0].message } as { error: string }
 
   // Usa service client para bypassar RLS no insert
   const serviceSupabase = await createServiceClient()
@@ -44,7 +43,7 @@ async function createPortalTicketAction(
 
   if (insertError || !ticket) {
     console.error('Erro ao criar chamado portal:', insertError)
-    return { error: 'Erro ao abrir o chamado. Tente novamente.' }
+    return { error: 'Erro ao abrir o chamado. Tente novamente.' } as { error: string }
   }
 
   try {
@@ -97,7 +96,7 @@ async function createPortalTicketAction(
     console.error('Erro ao enviar notificação chamado_aberto (portal):', e)
   }
 
-  redirect('/portal/chamados')
+  return { ticketId: ticket.id }
 }
 
 export default async function NovoChamadoPortalPage() {
