@@ -1,5 +1,5 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +16,15 @@ interface Props {
 
 export function TicketForm({ action, companies, contacts, contracts, analysts, categories }: Props) {
   const [state, formAction, pending] = useActionState(action, null)
+  const [selectedCompanyId, setSelectedCompanyId] = useState('')
+
+  const filteredContacts = selectedCompanyId
+    ? contacts.filter(c => c.company_id === selectedCompanyId)
+    : []
+
+  const filteredContracts = selectedCompanyId
+    ? contracts.filter(c => c.company_id === selectedCompanyId && c.status === 'ativo')
+    : contracts.filter(c => c.status === 'ativo')
 
   return (
     <form action={formAction} className="space-y-4 max-w-2xl">
@@ -49,16 +58,33 @@ export function TicketForm({ action, companies, contacts, contracts, analysts, c
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="company_id">Empresa *</Label>
-          <select id="company_id" name="company_id" required className="w-full border rounded-md px-3 py-2 text-sm bg-background">
+          <select
+            id="company_id"
+            name="company_id"
+            required
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+            value={selectedCompanyId}
+            onChange={e => setSelectedCompanyId(e.target.value)}
+          >
             <option value="">Selecionar empresa</option>
             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
           <Label htmlFor="contact_id">Solicitante *</Label>
-          <select id="contact_id" name="contact_id" required className="w-full border rounded-md px-3 py-2 text-sm bg-background">
-            <option value="">Selecionar contato</option>
-            {contacts.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+          <select
+            id="contact_id"
+            name="contact_id"
+            required
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+            disabled={!selectedCompanyId}
+          >
+            <option value="">
+              {selectedCompanyId ? 'Selecionar contato' : 'Selecione a empresa primeiro'}
+            </option>
+            {filteredContacts.map(c => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -67,7 +93,7 @@ export function TicketForm({ action, companies, contacts, contracts, analysts, c
           <Label htmlFor="contract_id">Contrato</Label>
           <select id="contract_id" name="contract_id" className="w-full border rounded-md px-3 py-2 text-sm bg-background">
             <option value="">Sem contrato</option>
-            {contracts.filter(c => c.status === 'ativo').map(c => (
+            {filteredContracts.map(c => (
               <option key={c.id} value={c.id}>Contrato {c.id.slice(0, 8)}...</option>
             ))}
           </select>
