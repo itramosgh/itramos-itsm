@@ -12,6 +12,9 @@ export async function createChangeRequestAction(_prevState: unknown, formData: F
     return { error: 'Contatos de notificação inválidos' }
   }
 
+  const isPreApproved = formData.get('is_pre_approved') === 'on'
+  const preApprovalEmail = (formData.get('pre_approval_email') as string) || undefined
+
   const parsed = changeRequestSchema.safeParse({
     title: formData.get('title'),
     description: formData.get('description'),
@@ -23,20 +26,39 @@ export async function createChangeRequestAction(_prevState: unknown, formData: F
     risk_level: formData.get('risk_level'),
     responsible_id: formData.get('responsible_id'),
     origin_ticket_id: formData.get('origin_ticket_id') || undefined,
+    is_pre_approved: isPreApproved,
+    pre_approval_email: preApprovalEmail,
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const insertStatus = parsed.data.is_pre_approved ? 'aprovada' : 'rascunho'
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: cr, error } = await supabase
     .from('change_requests')
-    .insert({ ...parsed.data as any, created_by: user!.id })
+    .insert({
+      ...parsed.data as any,
+      created_by: user!.id,
+      status: insertStatus,
+    })
     .select('id')
     .single<{ id: string }>()
 
   if (error) return { error: error.message }
+
+  // Pré-aprovação: registrar em change_approvals sem enviar e-mail
+  if (parsed.data.is_pre_approved && parsed.data.pre_approval_email) {
+    const serviceSupabase = await createServiceClient()
+    await serviceSupabase.from('change_approvals').insert({
+      change_request_id: cr!.id,
+      approver_email: parsed.data.pre_approval_email,
+      status: 'aprovado',
+      responded_at: new Date().toISOString(),
+    } as never)
+  }
 
   if (notificationContacts.length > 0) {
     const contactRows = notificationContacts.map((c) => ({
