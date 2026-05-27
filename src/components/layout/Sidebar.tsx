@@ -104,7 +104,7 @@ export function Sidebar({ appName, logoUrl }: SidebarProps) {
       <div className="p-4 border-b flex items-center">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={appName ?? 'Logo'} className="h-8 w-auto object-contain max-w-[180px]" />
+          <img src={logoUrl} alt={appName ?? 'Logo'} className="h-12 w-auto object-contain max-w-[200px]" />
         ) : (
           <span className="font-semibold text-lg">{appName || 'ITRAMOS ITSM'}</span>
         )}

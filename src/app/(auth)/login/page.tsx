@@ -19,7 +19,7 @@ export default async function LoginPage() {
         <div className="space-y-1 text-center">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={appName} className="h-12 object-contain mx-auto" />
+            <img src={logoUrl} alt={appName} className="h-16 object-contain mx-auto" />
           ) : (
             <h1 className="text-2xl font-semibold">{appName}</h1>
           )}

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     { data: monitoringRaw },
   ] = await Promise.all([
     supabase.from('companies').select('name').eq('id', companyId).single(),
-    supabase.from('platform_settings').select('logo_light_url').single(),
+    supabase.from('platform_settings').select('logo_light_url, company_name').single(),
     supabase
       .from('tickets')
       .select('number, title, status, priority, created_at, closed_at, assigned_to, category_id')
@@ -62,6 +62,7 @@ export async function GET(request: Request) {
 
 const companyName: string = companyData?.name ?? 'Cliente'
   const logoUrl: string | null = (settingsData as any)?.logo_light_url ?? null
+  const providerName: string | null = (settingsData as any)?.company_name || null
 
   const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
   const categoryIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.category_id).filter(Boolean))]
@@ -132,6 +133,7 @@ const companyName: string = companyData?.name ?? 'Cliente'
   const pdfBuffer = await renderToBuffer(
     createElement(MonthlyReportPDF, {
       companyName,
+      providerName,
       period,
       logoUrl,
       tickets,
