@@ -21,6 +21,7 @@ export default async function TarefasPage({
   let query: any = supabase
     .from('tasks')
     .select('id, title, due_date, priority, status, is_recurring, recurrence_active, profiles!assigned_to(full_name), companies(name)', { count: 'exact' })
+    .order('status', { ascending: false }) // vencida → pendente → concluida
     .order('due_date')
     .range(offset, offset + PAGE_SIZE - 1)
 

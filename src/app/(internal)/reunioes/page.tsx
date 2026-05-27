@@ -19,7 +19,8 @@ export default async function ReunioesPage({
   const { data: meetings, count } = await supabase
     .from('meetings')
     .select('id, title, scheduled_at, status, companies(name)', { count: 'exact' })
-    .order('scheduled_at', { ascending: false })
+    .order('status')             // agendada → cancelada → realizada (alfabético ASC)
+    .order('scheduled_at')       // dentro de cada grupo: mais próxima primeiro
     .range(offset, offset + PAGE_SIZE - 1) as { data: any[] | null; count: number | null }
 
   return (

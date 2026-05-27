@@ -243,6 +243,43 @@ export default async function DashboardPage() {
             </section>
           )}
 
+          {/* Tarefas vencidas */}
+          {tasks.length > 0 && (
+            <section>
+              <h2 className="text-lg font-medium mb-3 flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" />
+                Tarefas vencidas
+              </h2>
+              <div className="divide-y rounded-lg border">
+                {tasks.map((task: any) => (
+                  <div key={task.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href="/tarefas"
+                        className="font-medium text-sm hover:underline truncate block"
+                      >
+                        {task.title}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">
+                        {(task.companies as any)?.name ?? '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {!isAnalista && (task.profiles as any)?.full_name && (
+                        <span className="text-xs text-muted-foreground">
+                          {(task.profiles as any).full_name}
+                        </span>
+                      )}
+                      <Badge variant="destructive" className="whitespace-nowrap">
+                        Vencida em {formatDate(task.due_date)}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Tarefas próximas (pendentes nos próximos 7 dias) */}
           {upcoming.length > 0 && (
             <section>
@@ -282,43 +319,6 @@ export default async function DashboardPage() {
                     </div>
                   )
                 })}
-              </div>
-            </section>
-          )}
-
-          {/* Tarefas vencidas */}
-          {tasks.length > 0 && (
-            <section>
-              <h2 className="text-lg font-medium mb-3 flex items-center gap-2">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" />
-                Tarefas vencidas
-              </h2>
-              <div className="divide-y rounded-lg border">
-                {tasks.map((task: any) => (
-                  <div key={task.id} className="flex items-center justify-between px-4 py-3 gap-4">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href="/tarefas"
-                        className="font-medium text-sm hover:underline truncate block"
-                      >
-                        {task.title}
-                      </Link>
-                      <span className="text-xs text-muted-foreground">
-                        {(task.companies as any)?.name ?? '—'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {!isAnalista && (task.profiles as any)?.full_name && (
-                        <span className="text-xs text-muted-foreground">
-                          {(task.profiles as any).full_name}
-                        </span>
-                      )}
-                      <Badge variant="destructive" className="whitespace-nowrap">
-                        Vencida em {formatDate(task.due_date)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
               </div>
             </section>
           )}
