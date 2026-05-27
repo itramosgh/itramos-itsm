@@ -24,7 +24,7 @@ export async function calculateTicketSLAForCompany(
     .from('contracts')
     .select('id, is_24x7')
     .eq('company_id', companyId)
-    .eq('is_active', true)
+    .eq('status', 'ativo')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
