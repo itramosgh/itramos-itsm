@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ticketSchema } from '@/lib/validations/ticket'
+import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 import { NovoChamadoPortalForm } from './NovoChamadoPortalForm'
 
 async function createPortalTicketAction(formData: FormData) {
@@ -36,17 +37,20 @@ async function createPortalTicketAction(formData: FormData) {
     .single<{ id: string }>()
 
   if (ticket) {
-    const { calculateTicketSLAForCompany } = await import('@/lib/ticket-sla')
-    const sla = await calculateTicketSLAForCompany(supabase, {
-      companyId: contact.company_id,
-      priority: parsed.data.priority,
-      createdAt: new Date(),
-    })
-    if (sla) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('tickets') as any)
-        .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at })
-        .eq('id', ticket.id)
+    try {
+      const sla = await calculateTicketSLAForCompany(supabase, {
+        companyId: contact.company_id,
+        priority: parsed.data.priority,
+        createdAt: new Date(),
+      })
+      if (sla) {
+        await supabase
+          .from('tickets')
+          .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at } as never)
+          .eq('id', ticket.id)
+      }
+    } catch {
+      // SLA calc failure doesn't block ticket creation
     }
   }
 

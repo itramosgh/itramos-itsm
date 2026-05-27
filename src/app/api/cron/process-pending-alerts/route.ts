@@ -118,16 +118,21 @@ export async function GET(request: Request) {
       } as any)
 
       // Calcular SLA (contrato ativo da empresa — processado dentro do expediente)
-      const sla = await calculateTicketSLAForCompany(supabase, {
-        companyId: integration.company_id,
-        priority: alert.priority,
-        createdAt: new Date(),
-      })
-      if (sla) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('tickets') as any)
-          .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at })
-          .eq('id', (ticket as any).id)
+      try {
+        const sla = await calculateTicketSLAForCompany(supabase, {
+          companyId: integration.company_id,
+          priority: alert.priority,
+          createdAt: new Date(),
+        })
+        if (sla) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase.from('tickets') as any).update({
+            sla_deadline: sla.sla_deadline,
+            sla_starts_at: sla.sla_starts_at,
+          }).eq('id', (ticket as any).id)
+        }
+      } catch {
+        // SLA calc failure doesn't block ticket/alert processing
       }
 
       await insertLog(supabase, 'cron_job', 'success', `Alerta pendente processado: chamado #${(ticket as any).number}`, { alert_id: alert.id, ticket_id: (ticket as any).id })
