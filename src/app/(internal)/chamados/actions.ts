@@ -1,5 +1,4 @@
 'use server'
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema } from '@/lib/validations/ticket'
@@ -141,7 +140,8 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
     // Teams failure doesn't stop ticket creation
   }
 
-  redirect(`/chamados/${ticket!.id}`)
+  revalidatePath('/chamados')
+  return { ticketId: ticket!.id }
 }
 
 export async function addInteractionAction(_prevState: unknown, formData: FormData) {

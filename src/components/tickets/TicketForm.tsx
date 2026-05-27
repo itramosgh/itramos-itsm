@@ -1,12 +1,13 @@
 'use client'
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 interface Props {
-  action: (prevState: unknown, formData: FormData) => Promise<{ error?: string } | undefined>
+  action: (prevState: unknown, formData: FormData) => Promise<{ error?: string; ticketId?: string } | undefined>
   companies: { id: string; name: string }[]
   contacts: { id: string; full_name: string; company_id: string }[]
   contracts: { id: string; company_id: string; status: string }[]
@@ -17,6 +18,10 @@ interface Props {
 export function TicketForm({ action, companies, contacts, contracts, analysts, categories }: Props) {
   const [state, formAction, pending] = useActionState(action, null)
   const [selectedCompanyId, setSelectedCompanyId] = useState('')
+  const [files, setFiles] = useState<FileList | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const uploadStartedRef = useRef(false)
+  const router = useRouter()
 
   const filteredContacts = selectedCompanyId
     ? contacts.filter(c => c.company_id === selectedCompanyId)
@@ -25,6 +30,32 @@ export function TicketForm({ action, companies, contacts, contracts, analysts, c
   const filteredContracts = selectedCompanyId
     ? contracts.filter(c => c.company_id === selectedCompanyId && c.status === 'ativo')
     : contracts.filter(c => c.status === 'ativo')
+
+  useEffect(() => {
+    if (!state?.ticketId || uploadStartedRef.current) return
+    uploadStartedRef.current = true
+
+    async function uploadAndNavigate() {
+      setUploading(true)
+      if (files && files.length > 0) {
+        for (const file of Array.from(files)) {
+          const fd = new FormData()
+          fd.append('file', file)
+          fd.append('ticket_id', state!.ticketId!)
+          const res = await fetch('/api/upload/attachment', { method: 'POST', body: fd })
+          if (!res.ok) {
+            const data = await res.json()
+            window.alert(data?.error ?? 'Erro ao enviar anexo. Os outros arquivos serão ignorados.')
+            break
+          }
+        }
+      }
+      setUploading(false)
+      router.push(`/chamados/${state!.ticketId}`)
+    }
+
+    uploadAndNavigate()
+  }, [state, files, router])
 
   return (
     <form action={formAction} className="space-y-4 max-w-2xl">
@@ -106,8 +137,21 @@ export function TicketForm({ action, companies, contacts, contracts, analysts, c
           </select>
         </div>
       </div>
+      <div>
+        <Label htmlFor="attachments">Anexos</Label>
+        <Input
+          id="attachments"
+          type="file"
+          multiple
+          onChange={e => setFiles(e.target.files)}
+          className="cursor-pointer"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Máximo 10 MB por arquivo</p>
+      </div>
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
-      <Button type="submit" disabled={pending}>{pending ? 'Criando...' : 'Criar chamado'}</Button>
+      <Button type="submit" disabled={pending || uploading}>
+        {uploading ? 'Enviando anexos...' : pending ? 'Criando...' : 'Criar chamado'}
+      </Button>
     </form>
   )
 }
