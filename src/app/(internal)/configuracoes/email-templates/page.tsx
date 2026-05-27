@@ -41,7 +41,7 @@ export default async function EmailTemplatesPage({
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         {selected ? (
-          <EmailTemplateEditor template={selected} />
+          <EmailTemplateEditor key={selected.slug} template={selected} />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             Selecione um template na lista para editar.
