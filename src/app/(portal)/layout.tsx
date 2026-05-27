@@ -30,7 +30,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
     <div className="min-h-screen bg-background">
       {isPortalUser && (
         <nav className="border-b bg-card">
-          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <div className="px-6 h-14 flex items-center justify-between gap-4">
             <div className="flex items-center gap-6">
               <Link href="/portal/chamados">
                 {(settings as any)?.logo_light_url
