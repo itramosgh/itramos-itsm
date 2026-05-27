@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { createServiceClient } from '@/lib/supabase/server'
 import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
@@ -7,8 +8,27 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code')
   const next = url.searchParams.get('next') ?? '/dashboard'
 
+  const redirectTo = new URL(next, url.origin)
+  const response = NextResponse.redirect(redirectTo)
+
   if (code) {
-    const supabase = await createClient()
+    // Bind Supabase client directly to the redirect response so session
+    // cookies are included in the same response (not lost on redirect).
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
     const { data } = await supabase.auth.exchangeCodeForSession(code)
 
     // Log SSO logins via Azure AD
@@ -28,5 +48,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL(next, request.url))
+  return response
 }
