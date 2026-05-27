@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { isWithinMonitoringWindow } from '@/lib/monitoring'
 import { insertLog } from '@/lib/log'
+import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -115,6 +116,19 @@ export async function GET(request: Request) {
         content: `Chamado criado automaticamente (aguardava janela de monitoramento). Evento original: ${new Date(alert.event_at).toLocaleString('pt-BR')}`,
         is_system: true,
       } as any)
+
+      // Calcular SLA (contrato ativo da empresa — processado dentro do expediente)
+      const sla = await calculateTicketSLAForCompany(supabase, {
+        companyId: integration.company_id,
+        priority: alert.priority,
+        createdAt: new Date(),
+      })
+      if (sla) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('tickets') as any)
+          .update({ sla_deadline: sla.sla_deadline, sla_starts_at: sla.sla_starts_at })
+          .eq('id', (ticket as any).id)
+      }
 
       await insertLog(supabase, 'cron_job', 'success', `Alerta pendente processado: chamado #${(ticket as any).number}`, { alert_id: alert.id, ticket_id: (ticket as any).id })
       processed++
