@@ -6,7 +6,7 @@ import { ticketSchema, interactionSchema, scheduleSchema, approvalRequestSchema 
 import { isValidTransition } from '@/lib/ticket-transitions'
 import type { TicketStatus } from '@/types/database'
 import { sendEmail, approvalRequestHtml, buildFromAddress } from '@/lib/email'
-import { calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
+import { getEffectiveSLAStart, calculateDeadline, type BusinessHoursSettings } from '@/lib/sla'
 import { notifyTeams } from '@/lib/teams'
 import { checkAndAlertRecurrence } from '@/lib/recurrence-check'
 
@@ -64,15 +64,25 @@ export async function createTicketAction(_prevState: unknown, formData: FormData
         days: (settings as any).business_hours_days,
       }
       const holidayDates = (holidays ?? []).map((h: any) => h.date)
+      const now = new Date()
+      const startsAt = getEffectiveSLAStart(
+        now,
+        (contract as any).is_24x7,
+        businessSettings,
+        holidayDates
+      )
       const deadline = calculateDeadline({
-        createdAt: new Date(),
+        createdAt: startsAt,
         responseHours: (slaRule as any).response_hours,
         is24x7: (contract as any).is_24x7,
         settings: businessSettings,
         holidays: holidayDates,
       })
 
-      await supabase.from('tickets').update({ sla_deadline: deadline.toISOString() } as never).eq('id', ticket!.id)
+      await supabase.from('tickets').update({
+        sla_deadline: deadline.toISOString(),
+        sla_starts_at: startsAt.toISOString(),
+      } as never).eq('id', ticket!.id)
     }
   }
 
