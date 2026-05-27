@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { updateContactAction, updateContactFlagsAction, grantPortalAccessAction, deleteContactAction, resendContactInviteAction } from '@/app/(internal)/clientes/[id]/contatos/actions'
+import { fmtDateTime } from '@/lib/format-date'
 import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['contacts']['Row']
@@ -142,6 +143,12 @@ export function ContactList({ contacts, companyId }: Props) {
                   <p className="text-sm text-muted-foreground">{contact.email}</p>
                   {contact.phone && <p className="text-xs text-muted-foreground">{contact.phone}</p>}
                   {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Último acesso:{' '}
+                    {(contact as any).last_login_at
+                      ? fmtDateTime((contact as any).last_login_at)
+                      : 'Nunca'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex flex-wrap gap-1.5">
