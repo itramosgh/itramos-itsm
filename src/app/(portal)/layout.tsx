@@ -37,16 +37,16 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
   return (
     <div className="min-h-screen bg-background">
-      {isPortalUser && (
-        <nav className="border-b bg-card">
-          <div className="px-6 h-14 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-6">
-              <Link href="/portal/chamados">
-                {(settings as any)?.logo_light_url
-                  ? <img src={(settings as any).logo_light_url} alt="Logo" className="h-8 w-auto object-contain max-w-[160px]" />
-                  : <span className="font-semibold text-sm">{(settings as any)?.company_name || 'Portal'}</span>
-                }
-              </Link>
+      <nav className="border-b bg-card">
+        <div className="px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <Link href={isPortalUser ? '/portal/chamados' : '/portal/login'}>
+              {(settings as any)?.logo_light_url
+                ? <img src={(settings as any).logo_light_url} alt="Logo" className="h-8 w-auto object-contain max-w-[160px]" />
+                : <span className="font-semibold text-sm">{(settings as any)?.company_name || 'Portal do Cliente'}</span>
+              }
+            </Link>
+            {isPortalUser && (
               <div className="flex items-center gap-1">
                 {navItems
                   .filter(item => !item.restricted || isContractResponsible)
@@ -60,7 +60,9 @@ export default async function PortalLayout({ children }: { children: ReactNode }
                     </Link>
                   ))}
               </div>
-            </div>
+            )}
+          </div>
+          {isPortalUser && (
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground hidden sm:block">{contactName}</span>
               <form action={logoutAction}>
@@ -69,9 +71,9 @@ export default async function PortalLayout({ children }: { children: ReactNode }
                 </button>
               </form>
             </div>
-          </div>
-        </nav>
-      )}
+          )}
+        </div>
+      </nav>
       {children}
       {settings?.company_whatsapp && (
         <a

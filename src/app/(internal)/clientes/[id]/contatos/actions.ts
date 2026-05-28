@@ -118,7 +118,7 @@ export async function resendContactInviteAction(contactId: string, companyId: st
     const { data: linkData, error: linkError } = await serviceSupabase.auth.admin.generateLink({
       type: 'recovery',
       email: contact.email,
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/portal/redefinir-senha` },
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/portal/redefinir-senha` },
     })
     if (linkError) throw new Error(linkError.message)
     const inviteLink = (linkData as any)?.properties?.action_link
@@ -162,7 +162,25 @@ export async function grantPortalAccessAction(contactId: string, companyId: stri
   // as never: supabase-js generic constraint quirk
   await callerClient.from('contacts').update({ user_id: authData.user.id } as never).eq('id', contactId)
 
-  // E-mail de definição de senha — implementado no sub-spec 3 (E-mail)
+  // Enviar e-mail de boas-vindas com link de definição de senha
+  try {
+    const { data: linkData, error: linkError } = await serviceSupabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: contact.email,
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/portal/redefinir-senha` },
+    })
+    if (!linkError && linkData?.properties?.action_link) {
+      const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+      await sendEmailFromTemplate('definicao_senha_link', contact.email, {
+        nome_contato: contact.full_name,
+        link_definir_senha: linkData.properties.action_link,
+      })
+      await insertLog(serviceSupabase, 'email_sent', 'success', 'Boas-vindas ao portal enviado para novo contato', { email: contact.email })
+    }
+  } catch {
+    // E-mail failure doesn't block portal access grant
+  }
+
   revalidatePath(`/clientes/${companyId}/contatos`)
   return { success: true }
 }
