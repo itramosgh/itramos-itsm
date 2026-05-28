@@ -4,6 +4,7 @@ const FINAL_STATUSES = ['resolvido', 'fechado', 'reaberto']
 
 interface Props {
   createdAt: string
+  updatedAt?: string
   slaStartsAt: string | null
   slaDeadline: string | null
   slaFirstResponseAt: string | null
@@ -12,7 +13,7 @@ interface Props {
   status?: string
 }
 
-export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt, status }: Props) {
+export function SLAIndicator({ createdAt, updatedAt, slaStartsAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt, status }: Props) {
   if (!slaDeadline) return <span className="text-xs text-muted-foreground">Sem SLA</span>
 
   if (slaFirstResponseAt !== null) {
@@ -23,9 +24,15 @@ export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResp
     )
   }
 
-  // Ticket em estado final sem first response registrado → SLA violado
+  // Ticket em estado final sem first response registrado → compara updatedAt (proxy de resolução) com o prazo
   if (status && FINAL_STATUSES.includes(status)) {
-    return <span className="text-xs font-medium text-red-600">✗ SLA violado</span>
+    const resolvedTs = updatedAt ?? createdAt
+    const metByDeadline = new Date(resolvedTs) <= new Date(slaDeadline)
+    return (
+      <span className={`text-xs font-medium ${metByDeadline ? 'text-green-600' : 'text-red-600'}`}>
+        {metByDeadline ? '✓ SLA cumprido' : '✗ SLA violado'}
+      </span>
+    )
   }
 
   const effectiveStart = slaStartsAt ?? createdAt
