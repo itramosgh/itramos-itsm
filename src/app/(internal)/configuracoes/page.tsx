@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList, HardDrive,
+  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList, HardDrive, MessageSquare,
 } from 'lucide-react'
 
 const sections = [
@@ -8,6 +8,7 @@ const sections = [
   { href: '/configuracoes/feriados', label: 'Feriados', description: 'Importar e gerenciar feriados nacionais', icon: CalendarDays },
   { href: '/configuracoes/categorias', label: 'Categorias', description: 'Categorias de chamados', icon: Tag },
   { href: '/configuracoes/email-templates', label: 'Templates de E-mail', description: 'Editar templates de notificação', icon: Mail },
+  { href: '/configuracoes/templates', label: 'Templates de Resposta', description: 'Respostas rápidas para uso nos chamados', icon: MessageSquare },
   { href: '/configuracoes/tipos-dispositivo', label: 'Tipos de Dispositivo', description: 'Dispositivos dos contratos', icon: Monitor },
   { href: '/configuracoes/teams', label: 'Times', description: 'Grupos e equipes de atendimento', icon: Users },
   { href: '/configuracoes/logs', label: 'Logs do Sistema', description: 'Histórico de eventos e e-mails', icon: ClipboardList },
