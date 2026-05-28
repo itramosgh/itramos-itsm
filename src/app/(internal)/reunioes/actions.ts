@@ -229,6 +229,46 @@ export async function sendMinutesAction(meetingId: string) {
   return { success: true, sentTo: emails.length }
 }
 
+export async function addActionItemAction(meetingId: string, item: {
+  description: string
+  responsible_profile_id?: string | null
+  due_date?: string | null
+}) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('meeting_action_items').insert({
+    meeting_id: meetingId,
+    description: item.description,
+    responsible_profile_id: item.responsible_profile_id ?? null,
+    due_date: item.due_date ?? null,
+  } as never)
+  if (error) return { error: error.message }
+  revalidatePath(`/reunioes/${meetingId}`)
+  return { success: true }
+}
+
+export async function updateActionItemAction(itemId: string, meetingId: string, fields: {
+  description: string
+  responsible_profile_id?: string | null
+  due_date?: string | null
+}) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('meeting_action_items').update({
+    description: fields.description,
+    responsible_profile_id: fields.responsible_profile_id ?? null,
+    due_date: fields.due_date ?? null,
+  } as never).eq('id', itemId)
+  if (error) return { error: error.message }
+  revalidatePath(`/reunioes/${meetingId}`)
+  return { success: true }
+}
+
+export async function deleteActionItemAction(itemId: string, meetingId: string) {
+  const supabase = await createClient()
+  await supabase.from('meeting_action_items').delete().eq('id', itemId)
+  revalidatePath(`/reunioes/${meetingId}`)
+  return { success: true }
+}
+
 export async function convertActionItemToTaskAction(itemId: string, meetingId: string) {
   const supabase = await createClient()
 

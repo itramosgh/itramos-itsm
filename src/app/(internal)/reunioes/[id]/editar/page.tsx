@@ -1,18 +1,20 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { MeetingForm } from '@/components/reunioes/MeetingForm'
+import { ActionItemsPanel } from '@/components/reunioes/ActionItemsPanel'
 import { updateMeetingAction } from '@/app/(internal)/reunioes/actions'
 
 export default async function EditarReuniaoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: meeting }, { data: participantsData }, { data: companies }, { data: profiles }, { data: contacts }] = await Promise.all([
-    supabase.from('meetings').select('id, title, company_id, scheduled_at, notes_html, notes_rich_text').eq('id', id).single() as unknown as Promise<{ data: any }>,
+  const [{ data: meeting }, { data: participantsData }, { data: companies }, { data: profiles }, { data: contacts }, { data: actionItems }] = await Promise.all([
+    supabase.from('meetings').select('id, title, company_id, scheduled_at, notes_html, notes_rich_text, status').eq('id', id).single() as unknown as Promise<{ data: any }>,
     supabase.from('meeting_participants').select('id, profile_id, contact_id, external_email, external_name, profiles(full_name), contacts(full_name)').eq('meeting_id', id) as unknown as Promise<{ data: any[] | null }>,
     supabase.from('companies').select('id, name').eq('is_active', true).order('name') as unknown as Promise<{ data: any[] | null }>,
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name') as unknown as Promise<{ data: any[] | null }>,
     supabase.from('contacts').select('id, full_name, company_id').eq('is_active', true).order('full_name') as unknown as Promise<{ data: any[] | null }>,
+    supabase.from('meeting_action_items').select('*, profiles!responsible_profile_id(full_name)').eq('meeting_id', id).order('status') as unknown as Promise<{ data: any[] | null }>,
   ])
 
   if (!meeting) notFound()
@@ -24,15 +26,25 @@ export default async function EditarReuniaoPage({ params }: { params: Promise<{ 
   })
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Editar Reunião</h1>
-      <MeetingForm
-        action={updateMeetingAction.bind(null, id) as any}
-        initialData={{ ...meeting, participants }}
-        companies={companies ?? []}
-        profiles={profiles ?? []}
-        contacts={contacts ?? []}
-      />
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Editar Reunião</h1>
+        <MeetingForm
+          action={updateMeetingAction.bind(null, id) as any}
+          initialData={{ ...meeting, participants }}
+          companies={companies ?? []}
+          profiles={profiles ?? []}
+          contacts={contacts ?? []}
+        />
+      </div>
+      <div className="max-w-3xl">
+        <ActionItemsPanel
+          items={actionItems ?? []}
+          meetingId={id}
+          meetingStatus={meeting.status}
+          profiles={profiles ?? []}
+        />
+      </div>
     </div>
   )
 }

@@ -12,7 +12,7 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
   const supabase = await createClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [{ data: meeting }, { data: items }] = await Promise.all([
+  const [{ data: meeting }, { data: items }, { data: profiles }] = await Promise.all([
     supabase.from('meetings')
       .select('*, companies(name), meeting_participants(id, profile_id, contact_id, external_email, external_name, profiles(full_name), contacts(full_name))')
       .eq('id', id)
@@ -21,8 +21,9 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
       .select('*, profiles!responsible_profile_id(full_name)')
       .eq('meeting_id', id)
       .order('status'),
+    supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ]) as [{ data: any }, { data: any[] | null }]
+  ]) as [{ data: any }, { data: any[] | null }, { data: any[] | null }]
 
   if (!meeting) notFound()
 
@@ -73,7 +74,12 @@ export default async function ReuniaoDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <ActionItemsPanel items={items ?? []} meetingId={id} />
+      <ActionItemsPanel
+        items={items ?? []}
+        meetingId={id}
+        meetingStatus={meeting.status}
+        profiles={profiles ?? []}
+      />
 
       <MeetingAttachments meetingId={id} />
 
