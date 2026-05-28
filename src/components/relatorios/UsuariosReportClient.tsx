@@ -16,6 +16,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrador',
   gestor: 'Gestor',
   analista: 'Analista',
+  cliente: 'Cliente',
 }
 
 function fmtDateTime(iso: string | null) {
