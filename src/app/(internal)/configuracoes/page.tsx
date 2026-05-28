@@ -11,7 +11,7 @@ const sections = [
   { href: '/configuracoes/templates', label: 'Templates de Resposta', description: 'Respostas rápidas para uso nos chamados', icon: MessageSquare },
   { href: '/configuracoes/chamados-recorrentes', label: 'Chamados Recorrentes', description: 'Templates de chamados criados automaticamente por cliente', icon: RefreshCw },
   { href: '/configuracoes/tipos-dispositivo', label: 'Tipos de Dispositivo', description: 'Dispositivos dos contratos', icon: Monitor },
-  { href: '/configuracoes/teams', label: 'Times', description: 'Grupos e equipes de atendimento', icon: Users },
+  { href: '/configuracoes/teams', label: 'Microsoft Teams', description: 'Integração com o Microsoft Teams', icon: Users },
   { href: '/configuracoes/logs', label: 'Logs do Sistema', description: 'Histórico de eventos e e-mails', icon: ClipboardList },
   { href: '/configuracoes/storage', label: 'Armazenamento', description: 'Uso de storage por bucket e limpeza de arquivos antigos', icon: HardDrive },
 ]
