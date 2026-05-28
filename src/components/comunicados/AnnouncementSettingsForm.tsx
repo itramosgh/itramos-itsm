@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 interface Company { id: string; name: string }
+interface Contact { id: string; full_name: string; email: string }
 
 interface Props {
   id: string
@@ -15,8 +16,10 @@ interface Props {
   recipientType: string
   recipientCompanyId: string
   recipientDepartments: string[]
+  recipientContactIds: string[]
   scheduledAt: string | null
   companies: Company[]
+  contacts: Contact[]
 }
 
 function fmtDatetimeLocal(iso: string | null): string {
@@ -25,7 +28,8 @@ function fmtDatetimeLocal(iso: string | null): string {
 }
 
 export function AnnouncementSettingsForm({
-  id, subject, recipientType, recipientCompanyId, recipientDepartments, scheduledAt, companies,
+  id, subject, recipientType, recipientCompanyId, recipientDepartments, recipientContactIds,
+  scheduledAt, companies, contacts,
 }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
@@ -87,9 +91,11 @@ export function AnnouncementSettingsForm({
           </div>
           <RecipientSelector
             companies={companies}
+            contacts={contacts}
             initialType={recipientType}
             initialCompanyId={recipientCompanyId}
             initialDepartments={recipientDepartments}
+            initialContactIds={recipientContactIds}
           />
           <div>
             <Label>Agendamento (opcional)</Label>

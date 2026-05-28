@@ -5,12 +5,22 @@ import { Label } from '@/components/ui/label'
 const DEPARTMENTS = ['TI', 'Financeiro', 'RH', 'Operações', 'Comercial', 'Jurídico', 'Diretoria']
 
 interface Company { id: string; name: string }
+interface Contact { id: string; full_name: string; email: string }
 
-export function RecipientSelector({ companies, initialType = 'all', initialCompanyId = '', initialDepartments = [] }: {
+export function RecipientSelector({
+  companies,
+  contacts = [],
+  initialType = 'all',
+  initialCompanyId = '',
+  initialDepartments = [],
+  initialContactIds = [],
+}: {
   companies: Company[]
+  contacts?: Contact[]
   initialType?: string
   initialCompanyId?: string
   initialDepartments?: string[]
+  initialContactIds?: string[]
 }) {
   const [type, setType] = useState(initialType)
 
@@ -53,6 +63,26 @@ export function RecipientSelector({ companies, initialType = 'all', initialCompa
               </label>
             ))}
           </div>
+        </div>
+      )}
+
+      {type === 'manual' && (
+        <div className="space-y-1">
+          <Label>Contatos</Label>
+          {contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum contato ativo encontrado.</p>
+          ) : (
+            <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
+              {contacts.map(c => (
+                <label key={c.id} className="flex items-center gap-2 text-sm px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                  <input type="checkbox" name="recipient_contact_ids" value={c.id}
+                    defaultChecked={initialContactIds.includes(c.id)} />
+                  <span>{c.full_name}</span>
+                  <span className="text-muted-foreground text-xs ml-auto">{c.email}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

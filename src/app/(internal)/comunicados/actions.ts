@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { announcementSchema } from '@/lib/validations/announcement'
+import { announcementSchema, announcementSettingsSchema } from '@/lib/validations/announcement'
 
 export async function createAnnouncementAction(formData: FormData) {
   const raw: Record<string, unknown> = Object.fromEntries(formData.entries())
@@ -36,8 +36,9 @@ export async function updateAnnouncementAction(id: string, formData: FormData) {
   if (!raw.scheduled_at) delete raw.scheduled_at
   const depts = formData.getAll('recipient_departments')
   if (depts.length > 0) raw.recipient_departments = depts
+  const contactIds = formData.getAll('recipient_contact_ids') as string[]
 
-  const parsed = announcementSchema.safeParse(raw)
+  const parsed = announcementSettingsSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
@@ -50,6 +51,15 @@ export async function updateAnnouncementAction(id: string, formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  if (parsed.data.recipient_type === 'manual') {
+    await supabase.from('announcement_recipients' as never).delete().eq('announcement_id' as never, id)
+    if (contactIds.length > 0) {
+      await supabase.from('announcement_recipients' as never).insert(
+        contactIds.map(contactId => ({ announcement_id: id, contact_id: contactId })) as never
+      )
+    }
+  }
 
   revalidatePath('/comunicados')
   revalidatePath(`/comunicados/${id}`)
