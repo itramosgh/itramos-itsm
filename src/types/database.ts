@@ -49,7 +49,7 @@ export interface Database {
         Row: {
           id: string; full_name: string; role: UserRole
           notify_new_tickets: boolean; theme: Theme
-          is_active: boolean; created_at: string; updated_at: string
+          is_active: boolean; last_login_at: string | null; created_at: string; updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
