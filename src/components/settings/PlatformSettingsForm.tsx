@@ -67,8 +67,9 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
       holiday_notice_days: initialData?.holiday_notice_days ?? 7,
       recurrence_min_tickets: initialData?.recurrence_min_tickets ?? 3,
       recurrence_window_days: initialData?.recurrence_window_days ?? 30,
-      business_hours_start: initialData?.business_hours_start ?? '09:00',
-      business_hours_end: initialData?.business_hours_end ?? '18:00',
+      // PostgreSQL time type retorna 'HH:MM:SS'; normalizar para 'HH:MM' que o schema exige
+      business_hours_start: (initialData?.business_hours_start ?? '09:00').slice(0, 5),
+      business_hours_end: (initialData?.business_hours_end ?? '18:00').slice(0, 5),
       business_hours_days: (initialData?.business_hours_days as number[])?.map(String) as unknown as number[] ?? [1, 2, 3, 4, 5],
       hourly_rate: initialData?.hourly_rate ?? undefined,
       km_rate: initialData?.km_rate ?? undefined,
