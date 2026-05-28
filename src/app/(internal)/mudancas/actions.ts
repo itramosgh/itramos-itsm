@@ -25,6 +25,7 @@ export async function createChangeRequestAction(_prevState: unknown, formData: F
     rollback_plan: formData.get('rollback_plan'),
     risk_level: formData.get('risk_level'),
     responsible_id: formData.get('responsible_id'),
+    company_id: formData.get('company_id') || undefined,
     origin_ticket_id: formData.get('origin_ticket_id') || undefined,
     is_pre_approved: isPreApproved,
     pre_approval_email: preApprovalEmail,

@@ -13,10 +13,11 @@ export default async function NovaMudancaPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: analysts }, { data: contacts }] = await Promise.all([
+  const [{ data: profile }, { data: analysts }, { data: contacts }, { data: companies }] = await Promise.all([
     supabase.from('profiles').select('role').eq('id', user.id).single() as unknown as Promise<{ data: any }>,
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
-    supabase.from('contacts').select('id, full_name, email').eq('is_active', true).order('full_name'),
+    supabase.from('contacts').select('id, full_name, email, company_id').eq('is_active', true).order('full_name'),
+    supabase.from('companies').select('id, name').eq('is_active', true).order('name'),
   ])
 
   return (
@@ -25,6 +26,7 @@ export default async function NovaMudancaPage({
       <ChangeRequestForm
         analysts={(analysts as any[]) ?? []}
         allContacts={(contacts as any[]) ?? []}
+        companies={(companies as any[]) ?? []}
         originTicketId={ticket_id}
         originTicketTitle={ticket_title ? decodeURIComponent(ticket_title) : undefined}
         canPreApprove={['admin', 'gestor'].includes((profile as any)?.role)}

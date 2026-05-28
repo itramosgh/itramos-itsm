@@ -402,7 +402,7 @@ export interface Database {
           impacted_systems: string; impacted_users: string
           maintenance_start: string; maintenance_end: string
           rollback_plan: string; risk_level: RiskLevel
-          responsible_id: string; origin_ticket_id: string | null
+          responsible_id: string; company_id: string | null; origin_ticket_id: string | null
           status: ChangeRequestStatus
           execution_started_at: string | null; execution_completed_at: string | null
           reversal_reason: string | null

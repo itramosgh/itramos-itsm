@@ -10,13 +10,14 @@ import { createChangeRequestAction } from '@/app/(internal)/mudancas/actions'
 
 interface Props {
   analysts: Array<{ id: string; full_name: string }>
-  allContacts: Array<{ id: string; full_name: string; email: string }>
+  allContacts: Array<{ id: string; full_name: string; email: string; company_id: string }>
+  companies: Array<{ id: string; name: string }>
   originTicketId?: string
   originTicketTitle?: string
   canPreApprove: boolean
 }
 
-export function ChangeRequestForm({ analysts, allContacts, originTicketId, originTicketTitle, canPreApprove }: Props) {
+export function ChangeRequestForm({ analysts, allContacts, companies, originTicketId, originTicketTitle, canPreApprove }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [state, action, pending] = useActionState(createChangeRequestAction, null) as any
   const router = useRouter()
@@ -24,6 +25,11 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
   const [uploading, setUploading] = useState(false)
   const uploadStartedRef = useRef(false)
   const [isPreApproved, setIsPreApproved] = useState(false)
+  const [companyId, setCompanyId] = useState('')
+
+  const filteredContacts = companyId
+    ? allContacts.filter(c => c.company_id === companyId)
+    : []
 
   useEffect(() => {
     if (!state?.success || !state.id || uploadStartedRef.current) return
@@ -61,6 +67,23 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
           </p>
         </>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="company_id">Cliente *</Label>
+        <select
+          id="company_id"
+          name="company_id"
+          required
+          value={companyId}
+          onChange={e => setCompanyId(e.target.value)}
+          className="w-full border rounded-md px-3 py-2 text-sm"
+        >
+          <option value="">Selecionar cliente…</option>
+          {companies.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="title">Título *</Label>
@@ -131,7 +154,10 @@ export function ChangeRequestForm({ analysts, allContacts, originTicketId, origi
 
       <div className="space-y-2">
         <Label>Contatos a comunicar (início e conclusão) *</Label>
-        <NotificationContactsSelector dbContacts={allContacts} />
+        <NotificationContactsSelector dbContacts={filteredContacts} />
+        {!companyId && (
+          <p className="text-xs text-muted-foreground">Selecione um cliente para ver os contatos disponíveis.</p>
+        )}
       </div>
 
       {/* Pré-aprovação — visível apenas para admin/gestor */}

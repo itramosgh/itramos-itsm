@@ -10,6 +10,7 @@ export const changeRequestSchema = z.object({
   rollback_plan: z.string().min(1, 'Plano de rollback é obrigatório'),
   risk_level: z.enum(['baixo', 'medio', 'alto'], { message: 'Nível de risco inválido' }),
   responsible_id: z.string().uuid('Responsável inválido'),
+  company_id: z.string().uuid().optional(),
   origin_ticket_id: z.string().uuid().optional(),
   is_pre_approved: z.boolean().default(false),
   pre_approval_email: z.string().email('E-mail do aprovador inválido').optional(),
