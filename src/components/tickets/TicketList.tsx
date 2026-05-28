@@ -59,7 +59,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
                 {t.profiles?.full_name ?? <span className="text-muted-foreground/50">—</span>}
               </td>
               <td className="px-3 py-2">
-                <SLAIndicator createdAt={t.created_at} slaStartsAt={t.sla_starts_at ?? null} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} />
+                <SLAIndicator createdAt={t.created_at} slaStartsAt={t.sla_starts_at ?? null} slaDeadline={t.sla_deadline} slaFirstResponseAt={t.sla_first_response_at} slaMet={t.sla_met} slaPausedAt={t.sla_paused_at} status={t.status} />
               </td>
               <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDateTimeShort(t.created_at)}</td>
             </tr>

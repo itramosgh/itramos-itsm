@@ -1,5 +1,7 @@
 import { getSLARemainingMinutes, getSLAPercentUsed } from '@/lib/sla'
 
+const FINAL_STATUSES = ['resolvido', 'fechado', 'reaberto']
+
 interface Props {
   createdAt: string
   slaStartsAt: string | null
@@ -7,9 +9,10 @@ interface Props {
   slaFirstResponseAt: string | null
   slaMet: boolean | null
   slaPausedAt: string | null
+  status?: string
 }
 
-export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt }: Props) {
+export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResponseAt, slaMet, slaPausedAt, status }: Props) {
   if (!slaDeadline) return <span className="text-xs text-muted-foreground">Sem SLA</span>
 
   if (slaFirstResponseAt !== null) {
@@ -18,6 +21,11 @@ export function SLAIndicator({ createdAt, slaStartsAt, slaDeadline, slaFirstResp
         {slaMet ? '✓ SLA cumprido' : '✗ SLA violado'}
       </span>
     )
+  }
+
+  // Ticket em estado final sem first response registrado → SLA violado
+  if (status && FINAL_STATUSES.includes(status)) {
+    return <span className="text-xs font-medium text-red-600">✗ SLA violado</span>
   }
 
   const effectiveStart = slaStartsAt ?? createdAt

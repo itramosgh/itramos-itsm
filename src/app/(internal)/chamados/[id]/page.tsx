@@ -136,6 +136,7 @@ export default async function TicketDetailPage({
             slaFirstResponseAt={ticket.sla_first_response_at}
             slaMet={ticket.sla_met}
             slaPausedAt={ticket.sla_paused_at}
+            status={ticket.status}
           />
         </div>
       </div>
