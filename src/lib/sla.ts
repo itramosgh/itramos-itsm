@@ -1,3 +1,5 @@
+const SP_TIMEZONE = 'America/Sao_Paulo'
+
 export interface BusinessHoursSettings {
   start: string
   end: string
@@ -9,8 +11,42 @@ function parseTime(timeStr: string): { hours: number; minutes: number } {
   return { hours: h, minutes: m }
 }
 
-function toISOWeekday(jsDay: number): number {
-  return jsDay === 0 ? 7 : jsDay
+/**
+ * Returns date/time parts in São Paulo timezone.
+ * Necessary because the server (Vercel) runs in UTC, but business hours
+ * settings are expressed in São Paulo local time.
+ */
+function getSaoPauloDateParts(date: Date): {
+  isoDay: number
+  hours: number
+  minutes: number
+  dateStr: string
+} {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: SP_TIMEZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+  const parts = Object.fromEntries(fmt.formatToParts(date).map(p => [p.type, p.value]))
+  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  const jsDay = weekdayMap[parts.weekday] ?? 0
+  const isoDay = jsDay === 0 ? 7 : jsDay
+  const hours = parseInt(parts.hour === '24' ? '0' : parts.hour, 10)
+  const minutes = parseInt(parts.minute, 10)
+  const dateStr = `${parts.year}-${parts.month}-${parts.day}`
+  return { isoDay, hours, minutes, dateStr }
+}
+
+/**
+ * Creates a Date (UTC) representing the given São Paulo local time (HH:MM:00)
+ * on the same São Paulo calendar date as `date`.
+ * São Paulo is permanently UTC-3 (DST abolished in 2019).
+ */
+function saoPauloDateAtTime(date: Date, hours: number, minutes: number): Date {
+  const { dateStr } = getSaoPauloDateParts(date)
+  const hh = String(hours).padStart(2, '0')
+  const mm = String(minutes).padStart(2, '0')
+  return new Date(`${dateStr}T${hh}:${mm}:00-03:00`)
 }
 
 export function isBusinessDay(
@@ -18,9 +54,8 @@ export function isBusinessDay(
   settings: BusinessHoursSettings,
   holidays: string[]
 ): boolean {
-  const isoDay = toISOWeekday(date.getDay())
+  const { isoDay, dateStr } = getSaoPauloDateParts(date)
   if (!settings.days.includes(isoDay)) return false
-  const dateStr = date.toISOString().slice(0, 10)
   return !holidays.includes(dateStr)
 }
 
@@ -29,17 +64,17 @@ function nextBusinessDayStart(
   settings: BusinessHoursSettings,
   holidays: string[]
 ): Date {
-  const next = new Date(date)
-  next.setDate(next.getDate() + 1)
-  next.setHours(0, 0, 0, 0)
+  // Advance from the São Paulo calendar date of `date`, not from the UTC date
+  const { dateStr } = getSaoPauloDateParts(date)
+  const midnightSP = new Date(`${dateStr}T00:00:00-03:00`)
+  let next = new Date(midnightSP.getTime() + 24 * 60 * 60_000) // SP next day at midnight
 
   while (!isBusinessDay(next, settings, holidays)) {
-    next.setDate(next.getDate() + 1)
+    next = new Date(next.getTime() + 24 * 60 * 60_000)
   }
 
   const { hours, minutes } = parseTime(settings.start)
-  next.setHours(hours, minutes, 0, 0)
-  return next
+  return saoPauloDateAtTime(next, hours, minutes)
 }
 
 export function getEffectiveSLAStart(
@@ -59,12 +94,11 @@ export function getEffectiveSLAStart(
     return nextBusinessDayStart(createdAt, settings, holidays)
   }
 
-  const currentMins = createdAt.getHours() * 60 + createdAt.getMinutes()
+  const { hours, minutes } = getSaoPauloDateParts(createdAt)
+  const currentMins = hours * 60 + minutes
 
   if (currentMins < startMins) {
-    const snapped = new Date(createdAt)
-    snapped.setHours(startTime.hours, startTime.minutes, 0, 0)
-    return snapped
+    return saoPauloDateAtTime(createdAt, startTime.hours, startTime.minutes)
   }
 
   if (currentMins >= endMins) {
@@ -94,21 +128,20 @@ export function addBusinessHours(
       continue
     }
 
-    const currentMins = current.getHours() * 60 + current.getMinutes()
+    const { hours: spHours, minutes: spMinutes } = getSaoPauloDateParts(current)
+    let currentMins = spHours * 60 + spMinutes
 
     if (currentMins < startMins) {
-      current = new Date(current)
-      current.setHours(startTime.hours, startTime.minutes, 0, 0)
+      current = saoPauloDateAtTime(current, startTime.hours, startTime.minutes)
+      currentMins = startMins
     }
 
-    const refreshedMins = current.getHours() * 60 + current.getMinutes()
-
-    if (refreshedMins >= endMins) {
+    if (currentMins >= endMins) {
       current = nextBusinessDayStart(current, settings, holidays)
       continue
     }
 
-    const minutesAvailable = endMins - refreshedMins
+    const minutesAvailable = endMins - currentMins
 
     if (remainingMinutes <= minutesAvailable) {
       return new Date(current.getTime() + remainingMinutes * 60_000)
