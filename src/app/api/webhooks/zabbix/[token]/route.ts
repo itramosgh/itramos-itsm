@@ -281,7 +281,35 @@ export async function POST(
 
   await insertLog(supabase, 'webhook_received', 'success', `Zabbix: chamado #${(newTicket as any).number} criado`, { ticket_id: (newTicket as any).id, external_alert_id: externalAlertId })
 
-  // 9. Notify Teams (non-blocking)
+  // 9. Email notification (non-blocking)
+  try {
+    const { resolveContactEmails, resolveNewTicketNotifyEmails } = await import('@/lib/email-notifications')
+    const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    const [contactEmails, notifyEmails] = await Promise.all([
+      resolveContactEmails(supabase, contactId!, integration.company_id),
+      resolveNewTicketNotifyEmails(supabase),
+    ])
+    const allEmails = [...new Set([...contactEmails, ...notifyEmails])]
+    if (allEmails.length > 0) {
+      await sendEmailFromTemplate(
+        'chamado_aberto',
+        allEmails,
+        {
+          numero_chamado: String((newTicket as any).number),
+          titulo_chamado: title,
+          nome_cliente: company.name,
+          link_chamado: `${appUrl}/portal/chamados/${(newTicket as any).id}`,
+          prioridade: priority,
+        },
+        { replyTo: `chamado-${(newTicket as any).number}@reply.itramos.com.br` }
+      )
+    }
+  } catch (e) {
+    await insertLog(supabase, 'webhook_received', 'failure', 'Falha ao enviar e-mail notificação chamado_aberto (Zabbix)', { error: String(e) })
+  }
+
+  // 10. Notify Teams (non-blocking)
   try {
     await notifyTeams(supabase, 'monitoring_alert', {
       source: 'Zabbix',

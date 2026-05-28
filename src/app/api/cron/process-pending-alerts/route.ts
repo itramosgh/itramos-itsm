@@ -135,6 +135,34 @@ export async function GET(request: Request) {
         // SLA calc failure doesn't block ticket/alert processing
       }
 
+      // Email notification (non-blocking)
+      try {
+        const { resolveContactEmails, resolveNewTicketNotifyEmails } = await import('@/lib/email-notifications')
+        const { sendEmailFromTemplate } = await import('@/lib/email-template-sender')
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+        const [contactEmails, notifyEmails] = await Promise.all([
+          resolveContactEmails(supabase, (contact as any).id, integration.company_id),
+          resolveNewTicketNotifyEmails(supabase),
+        ])
+        const allEmails = [...new Set([...contactEmails, ...notifyEmails])]
+        if (allEmails.length > 0) {
+          await sendEmailFromTemplate(
+            'chamado_aberto',
+            allEmails,
+            {
+              numero_chamado: String((ticket as any).number),
+              titulo_chamado: alert.alert_title,
+              nome_cliente: company.name,
+              link_chamado: `${appUrl}/portal/chamados/${(ticket as any).id}`,
+              prioridade: alert.priority,
+            },
+            { replyTo: `chamado-${(ticket as any).number}@reply.itramos.com.br` }
+          )
+        }
+      } catch (e) {
+        await insertLog(supabase, 'cron_job', 'failure', 'Falha ao enviar e-mail notificação chamado_aberto (pending alert)', { error: String(e) })
+      }
+
       await insertLog(supabase, 'cron_job', 'success', `Alerta pendente processado: chamado #${(ticket as any).number}`, { alert_id: alert.id, ticket_id: (ticket as any).id })
       processed++
     }
