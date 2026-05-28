@@ -7,7 +7,7 @@ export const announcementSchema = z.object({
   recipient_type: z.enum(['all', 'company', 'department', 'manual']),
   recipient_company_id: z.string().uuid().optional(),
   recipient_departments: z.array(z.string()).optional(),
-  scheduled_at: z.string().datetime().optional(),
+  scheduled_at: z.string().optional(),
 }).refine(
   data => data.recipient_type !== 'company' || !!data.recipient_company_id,
   { message: 'Empresa é obrigatória para tipo "company"', path: ['recipient_company_id'] }
