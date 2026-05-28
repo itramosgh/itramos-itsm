@@ -14,6 +14,7 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
   initialBodyRichText?: object | null
   readOnly?: boolean
 }) {
+  const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -28,6 +29,16 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
       },
     },
   })
+
+  async function handleSave() {
+    if (!editor) return
+    setSaving(true)
+    setMsg(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (saveBodyAction as any)(announcementId, editor.getHTML(), editor.getJSON())
+    setSaving(false)
+    setMsg(result.error ? `Erro ao salvar: ${result.error}` : 'Conteúdo salvo.')
+  }
 
   async function handleSend() {
     if (!editor) return
@@ -83,7 +94,10 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
       </div>
       {!readOnly && (
         <div className="flex gap-3 items-center">
-          <Button onClick={handleSend} disabled={sending}>
+          <Button variant="outline" onClick={handleSave} disabled={saving || sending}>
+            {saving ? 'Salvando...' : 'Salvar rascunho'}
+          </Button>
+          <Button onClick={handleSend} disabled={saving || sending}>
             {sending ? 'Enviando...' : 'Enviar agora'}
           </Button>
           {msg && <span className="text-sm text-muted-foreground">{msg}</span>}
