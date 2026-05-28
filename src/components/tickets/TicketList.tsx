@@ -13,6 +13,7 @@ interface Ticket {
   priority: TicketPriority; created_at: string; sla_starts_at: string | null
   sla_deadline: string | null; sla_first_response_at: string | null
   sla_met: boolean | null; sla_paused_at: string | null; scheduled_at: string | null
+  channel?: string | null
   companies: { name: string } | null
   contacts: { full_name: string } | null
   profiles: { full_name: string } | null
@@ -40,6 +41,11 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               <td className="px-3 py-2 font-mono text-xs text-muted-foreground">#{t.number}</td>
               <td className="px-3 py-2 max-w-[260px]">
                 <Link href={`/chamados/${t.id}`} className="hover:underline font-medium text-sm leading-snug line-clamp-2">{t.title}</Link>
+                {t.channel === 'recorrente' && (
+                  <span className="inline-flex items-center text-xs text-blue-600 font-medium mt-0.5">
+                    🔁 Recorrente
+                  </span>
+                )}
                 {t.scheduled_at && (
                   <p className="text-xs text-blue-600 mt-0.5">
                     📅 {fmtDateTimeShort(t.scheduled_at)}

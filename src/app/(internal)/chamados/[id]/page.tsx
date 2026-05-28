@@ -105,7 +105,14 @@ export default async function TicketDetailPage({
           <p className="text-xs text-muted-foreground font-mono">#{ticket.number}</p>
           <h1 className="text-xl font-semibold mt-0.5">{ticket.title}</h1>
         </div>
-        <TicketStatusBadge status={ticket.status as TicketStatus} />
+        <div className="flex items-center gap-2">
+          <TicketStatusBadge status={ticket.status as TicketStatus} />
+          {ticket.channel === 'recorrente' && (
+            <span className="text-xs border rounded-full px-2 py-0.5 text-blue-600 border-blue-200">
+              🔁 Recorrente
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm border rounded-md p-4">
