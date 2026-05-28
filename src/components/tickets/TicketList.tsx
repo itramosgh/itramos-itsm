@@ -10,7 +10,7 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 
 interface Ticket {
   id: string; number: number; title: string; status: TicketStatus
-  priority: TicketPriority; created_at: string; sla_starts_at: string | null
+  priority: TicketPriority; created_at: string; updated_at: string; sla_starts_at: string | null
   sla_deadline: string | null; sla_first_response_at: string | null
   sla_met: boolean | null; sla_paused_at: string | null; scheduled_at: string | null
   channel?: string | null
