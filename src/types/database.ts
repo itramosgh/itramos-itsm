@@ -14,7 +14,7 @@ export type TicketStatus =
 
 export type TicketPriority = 'critica' | 'alta' | 'media' | 'baixa'
 
-export type TicketChannel = 'portal' | 'email' | 'zabbix' | 'azure_monitor' | 'url_monitoring'
+export type TicketChannel = 'portal' | 'email' | 'zabbix' | 'azure_monitor' | 'url_monitoring' | 'recorrente'
 
 export type InteractionType = 'mensagem' | 'status_change' | 'assignment' | 'system'
 
@@ -411,6 +411,18 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['change_requests']['Row'],
           'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['change_requests']['Insert']>
+      }
+      recurring_ticket_templates: {
+        Row: {
+          id: string; company_id: string; contact_id: string
+          title: string; description: string | null
+          priority: string; category_id: string | null
+          frequency: string; interval_days: number | null
+          next_run_at: string; is_active: boolean
+          created_by: string | null; created_at: string; updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['recurring_ticket_templates']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['recurring_ticket_templates']['Insert']>
       }
       change_request_contacts: {
         Row: {
