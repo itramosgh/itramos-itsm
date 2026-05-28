@@ -163,7 +163,10 @@ export async function POST(
   const withinWindow = isWithinMonitoringWindow(integration as any, now, holidays, platformHours)
 
   if (!withinWindow) {
-    if ((integration as any).out_of_window_behavior === 'aguardar_e_abrir') {
+    const behavior = (integration as any).out_of_window_behavior
+    if (behavior === 'abrir_imediatamente') {
+      // Prossegue para criação do chamado; SLA snapa para o próximo expediente via getEffectiveSLAStart
+    } else if (behavior === 'aguardar_e_abrir') {
       await supabase.from('pending_monitoring_alerts').insert({
         monitoring_integration_id: integration.id,
         external_alert_id: externalAlertId,
@@ -174,10 +177,11 @@ export async function POST(
         event_at: now.toISOString(),
       } as any)
       await insertLog(supabase, 'webhook_received', 'success', 'Zabbix alerta enfileirado (fora da janela)', { external_alert_id: externalAlertId })
+      return NextResponse.json({ ok: true, action: 'out_of_window' })
     } else {
       await insertLog(supabase, 'webhook_received', 'success', 'Zabbix alerta descartado (fora da janela)', { external_alert_id: externalAlertId })
+      return NextResponse.json({ ok: true, action: 'out_of_window' })
     }
-    return NextResponse.json({ ok: true, action: 'out_of_window' })
   }
 
   // 5. Check for duplicate

@@ -74,8 +74,9 @@ export function MonitoringIntegrationForm({ companyId }: { companyId: string }) 
       <div>
         <Label>Fora da janela</Label>
         <select name="out_of_window_behavior" className="w-full border rounded-md px-3 py-2 text-sm mt-1">
-          <option value="descartar">Descartar silenciosamente</option>
+          <option value="abrir_imediatamente">Abrir chamado imediatamente (SLA conta a partir do expediente)</option>
           <option value="aguardar_e_abrir">Aguardar início da janela e abrir</option>
+          <option value="descartar">Descartar silenciosamente</option>
         </select>
       </div>
 

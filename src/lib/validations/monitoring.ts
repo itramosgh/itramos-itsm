@@ -6,7 +6,7 @@ export const monitoringIntegrationSchema = z.object({
   window_custom_days: z.array(z.number().int().min(1).max(7)).optional(),
   window_custom_start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   window_custom_end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  out_of_window_behavior: z.enum(['descartar', 'aguardar_e_abrir']),
+  out_of_window_behavior: z.enum(['descartar', 'aguardar_e_abrir', 'abrir_imediatamente']),
   is_active: z.boolean().default(true),
 }).refine(
   (data) => {
