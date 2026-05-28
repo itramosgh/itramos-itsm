@@ -5,6 +5,7 @@ import { announcementSchema } from '@/lib/validations/announcement'
 
 export async function createAnnouncementAction(formData: FormData) {
   const raw: Record<string, unknown> = Object.fromEntries(formData.entries())
+  if (!raw.scheduled_at) delete raw.scheduled_at
   const depts = formData.getAll('recipient_departments')
   if (depts.length > 0) raw.recipient_departments = depts
 
