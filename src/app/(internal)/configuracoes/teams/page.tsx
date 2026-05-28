@@ -14,8 +14,8 @@ export default async function TeamsConfigPage() {
       <div>
         <h1 className="text-2xl font-semibold">Webhooks Microsoft Teams</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure Incoming Webhooks para receber notificações em canais do Teams.
-          Para criar um webhook: no Teams, abra o canal → ••• → Conectores → Incoming Webhook.
+          Configure webhooks para receber notificações em canais do Microsoft Teams.
+          Para criar: no canal desejado, clique em <strong className="text-foreground">•••</strong> → <strong className="text-foreground">Workflows</strong> → pesquise e ative o template <strong className="text-foreground">"Send webhook alerts"</strong>. Copie a URL gerada e cole abaixo.
         </p>
       </div>
       <TeamsWebhookList webhooks={(webhooks ?? []) as any[]} />

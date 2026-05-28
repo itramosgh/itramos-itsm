@@ -31,8 +31,8 @@ export function TeamsWebhookForm() {
           <Input name="name" placeholder="Ex: Canal Chamados" className="mt-1" required />
         </div>
         <div>
-          <Label>URL do Incoming Webhook</Label>
-          <Input name="webhook_url" placeholder="https://outlook.office.com/webhook/..." className="mt-1" required />
+          <Label>URL do Webhook</Label>
+          <Input name="webhook_url" placeholder="https://prod-xx.westus.logic.azure.com/..." className="mt-1" required />
         </div>
       </div>
 
