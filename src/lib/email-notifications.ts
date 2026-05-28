@@ -45,7 +45,6 @@ export async function resolveNewTicketNotifyEmails(
   const { data: profiles } = await serviceSupabase
     .from('profiles')
     .select('id')
-    .in('role', ['admin', 'gestor'])
     .eq('notify_new_tickets', true)
     .eq('is_active', true)
 
