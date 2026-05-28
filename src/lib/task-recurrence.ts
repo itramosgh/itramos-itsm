@@ -1,4 +1,8 @@
-export function nextOccurrenceDate(currentDueDate: string, recurrenceType: string): string {
+export function nextOccurrenceDate(
+  currentDueDate: string,
+  recurrenceType: string,
+  intervalDays?: number | null
+): string {
   // Use noon to avoid timezone issues in month/year changes
   const date = new Date(`${currentDueDate}T12:00:00`)
 
@@ -9,11 +13,17 @@ export function nextOccurrenceDate(currentDueDate: string, recurrenceType: strin
     case 'semanal':
       date.setDate(date.getDate() + 7)
       break
+    case 'quinzenal':
+      date.setDate(date.getDate() + 14)
+      break
     case 'mensal':
       date.setMonth(date.getMonth() + 1)
       break
     case 'anual':
       date.setFullYear(date.getFullYear() + 1)
+      break
+    case 'personalizado':
+      date.setDate(date.getDate() + (intervalDays ?? 1))
       break
   }
 
