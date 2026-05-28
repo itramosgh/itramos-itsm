@@ -1,6 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { loginSchema } from '@/lib/validations/auth'
 
 export async function portalLoginAction(prevState: { error: string } | null, formData: FormData) {
@@ -18,6 +18,13 @@ export async function portalLoginAction(prevState: { error: string } | null, for
     await supabase.auth.signOut()
     return { error: 'Use o painel interno para fazer login.' }
   }
+
+  // Registrar último acesso do contato
+  const serviceSupabase = await createServiceClient()
+  await serviceSupabase
+    .from('contacts')
+    .update({ last_login_at: new Date().toISOString() } as never)
+    .eq('user_id', data.user.id)
 
   redirect('/portal/chamados')
 }
