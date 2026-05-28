@@ -58,43 +58,33 @@
   strong { font-weight: 600; }
 
   @media print {
-    @page {
-      size: A4;
-      margin: 18mm 18mm 18mm 18mm;
-    }
+    @page { size: A4; margin: 18mm 18mm 18mm 18mm; }
 
     body { padding: 0; font-size: 12px; max-width: 100%; }
 
-    /* Headings never orphaned */
-    h1, h2, h3 {
+    h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+    h2 + *, h3 + * { page-break-before: avoid; break-before: avoid; }
+    img, table, blockquote, figure, pre, li { page-break-inside: avoid; break-inside: avoid; }
+
+    /* Todos os --- viram quebra de página... */
+    hr {
+      page-break-after: always;
+      break-after: always;
+      border: none;
+      margin: 0;
+    }
+
+    /* ...exceto o 1º (junta páginas 1+2) e os 2 últimos (junta páginas 9+10+11) */
+    hr:first-of-type,
+    hr:nth-last-of-type(1),
+    hr:nth-last-of-type(2) {
       page-break-after: avoid;
       break-after: avoid;
-    }
-
-    /* Keep heading glued to content below */
-    h2 + *, h3 + * {
-      page-break-before: avoid;
-      break-before: avoid;
-    }
-
-    /* Never break inside these elements */
-    img, table, blockquote, figure, pre, li {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* hr is just a visual separator — NO page break */
-    hr {
-      border: none;
       border-top: 1px solid #e5e7eb;
       margin: 14px 0;
     }
 
-    img {
-      max-height: 260px;
-      width: auto;
-    }
-
+    img { max-height: 260px; width: auto; }
     a { color: #1a1a1a; }
   }
 </style>
