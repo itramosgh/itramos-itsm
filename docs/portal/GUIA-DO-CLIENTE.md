@@ -155,10 +155,9 @@ Utilize o campo de busca para encontrar artigos relacionados ao seu problema. Se
 Para situações urgentes, você pode entrar em contato com nossa equipe diretamente pelo **WhatsApp**. Clique no botão **"Precisa de ajuda?"** localizado no canto inferior da tela.
 
 > **Suporte ITRAMOS**  
-> E-mail: chamados@itramos.com.br  
 > WhatsApp: (11) 98877-2800  
 > Portal: https://tickets.itramos.com.br/portal/login
 
 ---
 
-*Atualizado em 28/05/2026 — ITRAMOS Tecnologia*
+*Atualizado em 28/05/2026 — ITRAMOS*
