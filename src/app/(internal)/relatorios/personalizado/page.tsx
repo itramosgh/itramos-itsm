@@ -52,7 +52,7 @@ export default async function RelatorioPersonalizadoPage({
       let q = (supabase as any)
         .from('tickets')
         .select(`
-          id, number, title, priority, status, sla_met, sla_deadline,
+          id, number, title, priority, status, sla_met, sla_deadline, updated_at,
           created_at, closed_at,
           companies(name),
           contacts!contact_id(full_name),
@@ -76,10 +76,24 @@ export default async function RelatorioPersonalizadoPage({
 
   const tickets: any[] = ticketsResult?.data ?? []
 
+  const FINAL_STATUSES = ['resolvido', 'fechado', 'reaberto']
+
+  // Calcula SLA efetivo: usa sla_met do banco quando disponível; para chamados
+  // em estado final sem sla_met (ex: resolvidos automaticamente), compara updated_at
+  // com sla_deadline. Chamados ainda abertos sem sla_met retornam null.
+  function effectiveSLAMet(t: any): boolean | null {
+    if (t.sla_met !== null) return t.sla_met
+    if (!t.sla_deadline) return null
+    if (FINAL_STATUSES.includes(t.status)) {
+      return new Date(t.updated_at ?? t.created_at) <= new Date(t.sla_deadline)
+    }
+    return null
+  }
+
   // KPIs
   const total = tickets.length
-  const slaTickets = tickets.filter(t => t.sla_met !== null)
-  const slaMet = slaTickets.filter(t => t.sla_met === true).length
+  const slaTickets = tickets.filter(t => effectiveSLAMet(t) !== null)
+  const slaMet = slaTickets.filter(t => effectiveSLAMet(t) === true).length
   const slaPerc = slaTickets.length > 0 ? Math.round((slaMet / slaTickets.length) * 100) : null
 
   const closedTickets = tickets.filter(t => t.status === 'fechado' && t.closed_at)
@@ -315,9 +329,13 @@ export default async function RelatorioPersonalizadoPage({
                       </td>
                       <td className="px-4 py-3">{STATUS_LABELS[t.status] ?? t.status}</td>
                       <td className="px-4 py-3">
-                        {t.sla_met === null ? '—' : t.sla_met
-                          ? <span className="text-green-600 font-medium">✓</span>
-                          : <span className="text-red-600 font-medium">✗</span>}
+                        {(() => {
+                          const sla = effectiveSLAMet(t)
+                          if (sla === null) return <span className="text-muted-foreground">—</span>
+                          return sla
+                            ? <span className="text-green-600 font-medium">✓</span>
+                            : <span className="text-red-600 font-medium">✗</span>
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{fmtDate(t.created_at)}</td>
                     </tr>
