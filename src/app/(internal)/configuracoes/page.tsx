@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList,
+  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList, HardDrive,
 } from 'lucide-react'
 
 const sections = [
@@ -11,6 +11,7 @@ const sections = [
   { href: '/configuracoes/tipos-dispositivo', label: 'Tipos de Dispositivo', description: 'Dispositivos dos contratos', icon: Monitor },
   { href: '/configuracoes/teams', label: 'Times', description: 'Grupos e equipes de atendimento', icon: Users },
   { href: '/configuracoes/logs', label: 'Logs do Sistema', description: 'Histórico de eventos e e-mails', icon: ClipboardList },
+  { href: '/configuracoes/storage', label: 'Armazenamento', description: 'Uso de storage por bucket e limpeza de arquivos antigos', icon: HardDrive },
 ]
 
 export default function ConfiguracoesPage() {
