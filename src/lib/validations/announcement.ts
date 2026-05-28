@@ -16,6 +16,7 @@ const baseFields = {
   recipient_type: z.enum(['all', 'company', 'department', 'manual']),
   recipient_company_id: z.string().uuid().optional(),
   recipient_departments: z.array(z.string()).optional(),
+  recipient_extra_emails: z.array(z.string().email()).optional(),
   scheduled_at: z.string().optional(),
 }
 

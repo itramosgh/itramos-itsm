@@ -8,6 +8,8 @@ export async function createAnnouncementAction(formData: FormData) {
   if (!raw.scheduled_at) delete raw.scheduled_at
   const depts = formData.getAll('recipient_departments')
   if (depts.length > 0) raw.recipient_departments = depts
+  const extraEmails = formData.getAll('recipient_extra_emails')
+  if (extraEmails.length > 0) raw.recipient_extra_emails = extraEmails
 
   const parsed = announcementSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -36,6 +38,8 @@ export async function updateAnnouncementAction(id: string, formData: FormData) {
   if (!raw.scheduled_at) delete raw.scheduled_at
   const depts = formData.getAll('recipient_departments')
   if (depts.length > 0) raw.recipient_departments = depts
+  const extraEmails = formData.getAll('recipient_extra_emails')
+  if (extraEmails.length > 0) raw.recipient_extra_emails = extraEmails
   const contactIds = formData.getAll('recipient_contact_ids') as string[]
 
   const parsed = announcementSettingsSchema.safeParse(raw)
@@ -108,12 +112,18 @@ async function resolveAnnouncementRecipients(
       .in('department', ann.recipient_departments ?? []).eq('is_active', true)
     return data ?? []
   }
-  // manual
+  // manual: contatos selecionados + e-mails extras digitados
   const { data } = await supabase.from('announcement_recipients')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .select('contacts(id, email, full_name)').eq('announcement_id', ann.id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data ?? []).map((r: any) => r.contacts).filter(Boolean)
+  const contactRecipients = (data ?? []).map((r: any) => r.contacts).filter(Boolean)
+  const extraEmails = (ann.recipient_extra_emails ?? []).map((email: string, i: number) => ({
+    id: `extra-${i}`,
+    email,
+    full_name: email,
+  }))
+  return [...contactRecipients, ...extraEmails]
 }
 
 export async function sendAnnouncementAction(id: string) {

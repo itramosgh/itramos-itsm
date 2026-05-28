@@ -156,6 +156,7 @@ export interface Database {
           id: string; subject: string; body_rich_text: Json | null; body_html: string | null
           recipient_type: 'all' | 'company' | 'department' | 'manual'
           recipient_company_id: string | null; recipient_departments: string[] | null
+          recipient_extra_emails: string[]
           status: 'rascunho' | 'agendado' | 'enviado' | 'cancelado'
           scheduled_at: string | null; sent_at: string | null; recipient_count: number | null
           created_by: string; created_at: string; updated_at: string

@@ -48,6 +48,7 @@ export default async function ComunicadoDetailPage({ params }: { params: Promise
           recipientCompanyId={String(ann.recipient_company_id ?? '')}
           recipientDepartments={(ann.recipient_departments as string[]) ?? []}
           recipientContactIds={(manualRecipients ?? []).map(r => r.contact_id)}
+          recipientExtraEmails={(ann.recipient_extra_emails as string[]) ?? []}
           scheduledAt={(ann.scheduled_at as string | null) ?? null}
           companies={companies ?? []}
           contacts={contacts ?? []}

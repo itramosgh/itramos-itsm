@@ -17,6 +17,7 @@ interface Props {
   recipientCompanyId: string
   recipientDepartments: string[]
   recipientContactIds: string[]
+  recipientExtraEmails: string[]
   scheduledAt: string | null
   companies: Company[]
   contacts: Contact[]
@@ -29,7 +30,7 @@ function fmtDatetimeLocal(iso: string | null): string {
 
 export function AnnouncementSettingsForm({
   id, subject, recipientType, recipientCompanyId, recipientDepartments, recipientContactIds,
-  scheduledAt, companies, contacts,
+  recipientExtraEmails, scheduledAt, companies, contacts,
 }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
@@ -96,6 +97,7 @@ export function AnnouncementSettingsForm({
             initialCompanyId={recipientCompanyId}
             initialDepartments={recipientDepartments}
             initialContactIds={recipientContactIds}
+            initialExtraEmails={recipientExtraEmails}
           />
           <div>
             <Label>Agendamento (opcional)</Label>

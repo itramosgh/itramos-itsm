@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 const DEPARTMENTS = ['TI', 'Financeiro', 'RH', 'Operações', 'Comercial', 'Jurídico', 'Diretoria']
 
@@ -14,6 +16,7 @@ export function RecipientSelector({
   initialCompanyId = '',
   initialDepartments = [],
   initialContactIds = [],
+  initialExtraEmails = [],
 }: {
   companies: Company[]
   contacts?: Contact[]
@@ -21,8 +24,23 @@ export function RecipientSelector({
   initialCompanyId?: string
   initialDepartments?: string[]
   initialContactIds?: string[]
+  initialExtraEmails?: string[]
 }) {
   const [type, setType] = useState(initialType)
+  const [extEmail, setExtEmail] = useState('')
+  const [extraEmails, setExtraEmails] = useState<string[]>(initialExtraEmails)
+
+  function addExtraEmail() {
+    const email = extEmail.trim()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return
+    if (extraEmails.includes(email)) return
+    setExtraEmails(prev => [...prev, email])
+    setExtEmail('')
+  }
+
+  function removeExtraEmail(email: string) {
+    setExtraEmails(prev => prev.filter(e => e !== email))
+  }
 
   return (
     <div className="space-y-3">
@@ -67,22 +85,53 @@ export function RecipientSelector({
       )}
 
       {type === 'manual' && (
-        <div className="space-y-1">
-          <Label>Contatos</Label>
-          {contacts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum contato ativo encontrado.</p>
-          ) : (
-            <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
-              {contacts.map(c => (
-                <label key={c.id} className="flex items-center gap-2 text-sm px-3 py-2 hover:bg-muted/50 cursor-pointer">
-                  <input type="checkbox" name="recipient_contact_ids" value={c.id}
-                    defaultChecked={initialContactIds.includes(c.id)} />
-                  <span>{c.full_name}</span>
-                  <span className="text-muted-foreground text-xs ml-auto">{c.email}</span>
-                </label>
-              ))}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label>Contatos do sistema</Label>
+            {contacts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum contato ativo encontrado.</p>
+            ) : (
+              <div className="border rounded-md max-h-40 overflow-y-auto divide-y">
+                {contacts.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                    <input type="checkbox" name="recipient_contact_ids" value={c.id}
+                      defaultChecked={initialContactIds.includes(c.id)} />
+                    <span>{c.full_name}</span>
+                    <span className="text-muted-foreground text-xs ml-auto">{c.email}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>E-mails externos</Label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={extEmail}
+                onChange={e => setExtEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addExtraEmail() } }}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addExtraEmail}>
+                Adicionar
+              </Button>
             </div>
-          )}
+            {extraEmails.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {extraEmails.map(email => (
+                  <span key={email} className="flex items-center gap-1 bg-muted text-xs px-2 py-1 rounded-full">
+                    {email}
+                    <button type="button" onClick={() => removeExtraEmail(email)}
+                      className="text-muted-foreground hover:text-foreground ml-0.5">×</button>
+                    <input type="hidden" name="recipient_extra_emails" value={email} />
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
