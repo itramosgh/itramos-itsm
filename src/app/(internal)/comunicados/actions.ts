@@ -180,17 +180,23 @@ export async function sendAnnouncementAction(id: string) {
   const from = buildFromAddress(settings?.email_from_name ?? null, settings?.email_from_address ?? null)
 
   let sent = 0
+  const sendErrors: string[] = []
+  const resendIds: string[] = []
+
   for (const recipient of recipients) {
     try {
-      await sendEmail({
+      const resendId = await sendEmail({
         to: recipient.email,
         subject: ann.subject,
         html: wrappedHtml,
         from,
         ...(emailAttachments.length > 0 ? { attachments: emailAttachments } : {}),
       })
+      if (resendId) resendIds.push(`${recipient.email}:${resendId}`)
       sent++
-    } catch (e) {
+    } catch (e: any) {
+      const msg = e?.message ?? String(e)
+      sendErrors.push(`${recipient.email}: ${msg}`)
       console.error(`Erro ao enviar comunicado para ${recipient.email}:`, e)
     }
   }
@@ -202,8 +208,14 @@ export async function sendAnnouncementAction(id: string) {
 
   await (serviceSupabase as any).from('system_logs').insert({
     category: 'email_sent',
-    status: 'success',
-    description: `Comunicado "${ann.subject}" enviado para ${sent} destinatários`,
+    status: sendErrors.length > 0 ? 'failure' : 'success',
+    description: `Comunicado "${ann.subject}" enviado para ${sent} destinatário(s)${sendErrors.length > 0 ? ` — ${sendErrors.length} erro(s)` : ''}`,
+    details: {
+      from,
+      recipients: recipients.map(r => r.email),
+      resend_ids: resendIds,
+      errors: sendErrors,
+    },
   } as never)
 
   revalidatePath('/comunicados')

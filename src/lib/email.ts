@@ -11,8 +11,8 @@ export interface SendEmailParams {
   attachments?: Array<{ filename: string; content: Buffer | Uint8Array; contentType?: string }>
 }
 
-export async function sendEmail(params: SendEmailParams): Promise<void> {
-  const { error } = await resend.emails.send({
+export async function sendEmail(params: SendEmailParams): Promise<string | null> {
+  const { data, error } = await resend.emails.send({
     from: params.from,
     to: typeof params.to === 'string' ? [params.to] : params.to,
     subject: params.subject,
@@ -22,6 +22,7 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     ...(params.attachments ? { attachments: params.attachments as any } : {}),
   })
   if (error) throw new Error(`Resend error: ${error.message}`)
+  return data?.id ?? null
 }
 
 export function buildFromAddress(name: string | null, address: string | null): string {
