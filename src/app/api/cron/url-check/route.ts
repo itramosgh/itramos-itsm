@@ -193,16 +193,18 @@ export async function GET(request: Request) {
       if (ticketId) {
         const { data: openTicket } = await supabase
           .from('tickets')
-          .select('id, number, status')
+          .select('id, number, status, sla_deadline')
           .eq('id', ticketId)
           .not('status', 'in', '("fechado","resolvido")')
           .maybeSingle()
 
         if (openTicket) {
           if (isValidTransition((openTicket as any).status, 'resolvido')) {
+            const slaMet = (openTicket as any).sla_deadline ? new Date() <= new Date((openTicket as any).sla_deadline) : null
             await supabase.from('tickets').update({
               status: 'resolvido',
               resolution: 'URL voltou a responder normalmente',
+              sla_met: slaMet,
             } as never).eq('id', ticketId)
 
             await supabase.from('ticket_interactions').insert({

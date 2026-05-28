@@ -69,7 +69,7 @@ export async function POST(
     if (recoveryAlertId) {
       const { data: existingTicketRaw } = await supabase
         .from('tickets')
-        .select('id, status')
+        .select('id, status, sla_deadline')
         .eq('external_alert_id', recoveryAlertId)
         .not('status', 'in', '("fechado","resolvido")')
         .maybeSingle()
@@ -78,9 +78,11 @@ export async function POST(
       const existingTicket = existingTicketRaw as any
       if (existingTicket) {
         if (isValidTransition(existingTicket.status, 'resolvido')) {
+          const slaMet = existingTicket.sla_deadline ? new Date() <= new Date(existingTicket.sla_deadline) : null
           await (supabase.from('tickets') as any).update({
             status: 'resolvido',
             resolution: 'Resolvido automaticamente via Zabbix',
+            sla_met: slaMet,
           }).eq('id', existingTicket.id)
 
           await supabase.from('ticket_interactions').insert({
@@ -112,16 +114,18 @@ export async function POST(
   if (externalAlertId) {
     const { data: existingRaw } = await supabase
       .from('tickets')
-      .select('id, status')
+      .select('id, status, sla_deadline')
       .eq('external_alert_id', externalAlertId)
       .not('status', 'in', '("fechado","resolvido")')
       .maybeSingle()
     const existing = existingRaw as any
     if (existing) {
       if (isValidTransition(existing.status, 'resolvido')) {
+        const slaMet = existing.sla_deadline ? new Date() <= new Date(existing.sla_deadline) : null
         await (supabase.from('tickets') as any).update({
           status: 'resolvido',
           resolution: 'Resolvido automaticamente via Zabbix',
+          sla_met: slaMet,
         }).eq('id', existing.id)
         await supabase.from('ticket_interactions').insert({
           ticket_id: existing.id,

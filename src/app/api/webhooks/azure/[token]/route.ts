@@ -65,7 +65,7 @@ export async function POST(
     if (externalAlertId) {
       const { data: existingTicket } = await supabase
         .from('tickets')
-        .select('id')
+        .select('id, status, sla_deadline')
         .eq('external_alert_id', externalAlertId)
         .not('status', 'in', '("fechado","resolvido")')
         .maybeSingle()
@@ -77,9 +77,12 @@ export async function POST(
         const currentStatus = (existingTicket as any).status
         if (isValidTransition(currentStatus, 'resolvido')) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const slaMet = (existingTicket as any).sla_deadline ? new Date() <= new Date((existingTicket as any).sla_deadline) : null
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase.from('tickets') as any).update({
             status: 'resolvido',
             resolution: 'Resolvido automaticamente via Azure Monitor',
+            sla_met: slaMet,
           }).eq('id', ticketId)
 
           await supabase.from('ticket_interactions').insert({
