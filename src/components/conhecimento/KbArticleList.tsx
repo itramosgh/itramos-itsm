@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { toggleArticleActiveAction } from '@/app/(internal)/conhecimento/actions'
+import { DeleteArticleButton } from './DeleteArticleButton'
 
 type Article = {
   id: string
@@ -45,13 +46,14 @@ export function KbArticleList({ articles }: { articles: Article[] }) {
                 </Badge>
               </td>
               <td className="px-4 py-3 text-right">
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end items-center">
                   <Link href={`/conhecimento/artigos/${a.id}/editar`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Editar</Link>
                   <form action={toggleArticleActiveAction.bind(null, a.id, !a.is_active)}>
                     <Button variant="ghost" size="sm" type="submit">
                       {a.is_active ? 'Desativar' : 'Ativar'}
                     </Button>
                   </form>
+                  <DeleteArticleButton id={a.id} />
                 </div>
               </td>
             </tr>

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import { DeleteDocumentButton } from './DeleteDocumentButton'
 
 type Document = {
   id: string
@@ -40,9 +41,12 @@ export function KbDocumentList({ documents }: { documents: Document[] }) {
                 </Badge>
               </td>
               <td className="px-4 py-3 text-right">
-                <Link href={`/conhecimento/documentos/${d.id}/editar`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-                  Editar
-                </Link>
+                <div className="flex gap-2 justify-end items-center">
+                  <Link href={`/conhecimento/documentos/${d.id}/editar`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                    Editar
+                  </Link>
+                  <DeleteDocumentButton id={d.id} />
+                </div>
               </td>
             </tr>
           ))}
