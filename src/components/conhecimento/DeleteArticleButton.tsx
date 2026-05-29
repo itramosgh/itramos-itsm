@@ -1,5 +1,5 @@
 'use client'
-import { useTransition } from 'react'
+import { useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { deleteArticleAction } from '@/app/(internal)/conhecimento/actions'
@@ -7,18 +7,27 @@ import { deleteArticleAction } from '@/app/(internal)/conhecimento/actions'
 export function DeleteArticleButton({ id }: { id: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   function handleDelete() {
     if (!confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return
+    setError(null)
     startTransition(async () => {
-      await deleteArticleAction(id)
-      router.push('/conhecimento')
+      try {
+        await deleteArticleAction(id)
+        router.push('/conhecimento')
+      } catch (e: any) {
+        setError(e?.message ?? 'Erro ao excluir')
+      }
     })
   }
 
   return (
-    <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
-      {isPending ? 'Excluindo...' : 'Excluir'}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
+        {isPending ? 'Excluindo...' : 'Excluir'}
+      </Button>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }

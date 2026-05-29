@@ -62,17 +62,17 @@ export async function updateArticleAction(id: string, _prevState: unknown, formD
 }
 
 export async function deleteArticleAction(id: string) {
-  const supabase = await createClient()
   const serviceSupabase = await createServiceClient()
-  const { data: attachments } = await supabase
+  const { data: attachments } = await serviceSupabase
     .from('kb_article_attachments')
     .select('storage_path')
     .eq('article_id', id)
   if (attachments?.length) {
     await serviceSupabase.storage.from('kb-article-attachments').remove(attachments.map((a: any) => a.storage_path))
-    await supabase.from('kb_article_attachments').delete().eq('article_id', id)
+    await serviceSupabase.from('kb_article_attachments').delete().eq('article_id', id)
   }
-  await supabase.from('kb_articles').delete().eq('id', id)
+  const { error } = await serviceSupabase.from('kb_articles').delete().eq('id', id)
+  if (error) throw new Error(error.message)
   revalidatePath('/conhecimento')
 }
 
@@ -137,16 +137,17 @@ export async function updateDocumentAction(id: string, formData: FormData) {
 }
 
 export async function deleteDocumentAction(id: string) {
-  const supabase = await createClient()
-  const { data: attachments } = await supabase
+  const serviceSupabase = await createServiceClient()
+  const { data: attachments } = await serviceSupabase
     .from('kb_document_attachments')
     .select('storage_path')
     .eq('document_id', id)
   if (attachments?.length) {
-    await supabase.storage.from('kb-documents').remove(attachments.map((a: any) => a.storage_path))
-    await supabase.from('kb_document_attachments').delete().eq('document_id', id)
+    await serviceSupabase.storage.from('kb-documents').remove(attachments.map((a: any) => a.storage_path))
+    await serviceSupabase.from('kb_document_attachments').delete().eq('document_id', id)
   }
-  await supabase.from('kb_documents').delete().eq('id', id)
+  const { error } = await serviceSupabase.from('kb_documents').delete().eq('id', id)
+  if (error) throw new Error(error.message)
   revalidatePath('/conhecimento')
 }
 
