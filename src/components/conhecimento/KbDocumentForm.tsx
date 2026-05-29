@@ -2,6 +2,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,6 +29,7 @@ export function KbDocumentForm({
   companies,
   attachments = [],
 }: KbDocumentFormProps) {
+  const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
@@ -74,6 +76,8 @@ export function KbDocumentForm({
         await handleUpload(file, targetId)
       }
     }
+
+    router.push(`/conhecimento/documentos/${targetId}`)
   }
 
   return (

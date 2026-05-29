@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import { DeleteDocumentButton } from '@/components/conhecimento/DeleteDocumentButton'
 
 export default async function DocumentoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,9 +22,12 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
           <h1 className="text-2xl font-semibold">{doc.title}</h1>
           <p className="text-muted-foreground text-sm">{(doc as any).companies?.name}</p>
         </div>
-        <Link href={`/conhecimento/documentos/${id}/editar`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          Editar
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/conhecimento/documentos/${id}/editar`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Editar
+          </Link>
+          <DeleteDocumentButton id={id} />
+        </div>
       </div>
       {doc.content_html && (
         <div

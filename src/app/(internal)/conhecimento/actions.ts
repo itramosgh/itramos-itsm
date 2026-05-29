@@ -121,6 +121,20 @@ export async function updateDocumentAction(id: string, formData: FormData) {
   return { success: true }
 }
 
+export async function deleteDocumentAction(id: string) {
+  const supabase = await createClient()
+  const { data: attachments } = await supabase
+    .from('kb_document_attachments')
+    .select('storage_path')
+    .eq('document_id', id)
+  if (attachments?.length) {
+    await supabase.storage.from('kb-documents').remove(attachments.map((a: any) => a.storage_path))
+    await supabase.from('kb_document_attachments').delete().eq('document_id', id)
+  }
+  await supabase.from('kb_documents').delete().eq('id', id)
+  revalidatePath('/conhecimento')
+}
+
 export async function deleteDocumentAttachmentAction(attachmentId: string, storagePath: string, documentId: string) {
   const supabase = await createClient()
   await supabase.storage.from('kb-documents').remove([storagePath])
