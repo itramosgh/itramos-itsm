@@ -127,19 +127,10 @@ async function resolveAnnouncementRecipients(
   return [...contactRecipients, ...extraEmails]
 }
 
-export async function sendAnnouncementAction(id: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!['admin', 'gestor'].includes((profile as any)?.role)) {
-    return { error: 'Sem permissão para enviar comunicados' }
-  }
-
-  const serviceSupabase = await createServiceClient()
-
-  const { data: ann } = (await supabase.from('announcements').select('*').eq('id', id).single()) as { data: any }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function dispatchAnnouncement(serviceSupabase: any, id: string): Promise<{ success: true; sent: number } | { error: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: ann } = (await serviceSupabase.from('announcements').select('*').eq('id', id).single()) as { data: any }
   if (!ann) return { error: 'Comunicado não encontrado' }
   if (!['rascunho', 'agendado'].includes(ann.status)) return { error: 'Comunicado já enviado ou cancelado' }
   if (!ann.body_html) return { error: 'Conteúdo do comunicado está vazio' }
@@ -147,7 +138,8 @@ export async function sendAnnouncementAction(id: string) {
   const recipients = await resolveAnnouncementRecipients(serviceSupabase, ann)
   if (recipients.length === 0) return { error: 'Nenhum destinatário encontrado' }
 
-  const { data: settings } = (await (serviceSupabase as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: settings } = (await serviceSupabase
     .from('platform_settings')
     .select('email_from_name, email_from_address, logo_light_url, company_name')
     .single()) as { data: any }
@@ -155,15 +147,15 @@ export async function sendAnnouncementAction(id: string) {
   const { wrapEmailHtml } = await import('@/lib/email-template-sender')
   const { sendEmail, buildFromAddress } = await import('@/lib/email')
 
-  // Buscar e baixar anexos do Storage
-  const { data: attachments } = (await (serviceSupabase as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: attachments } = (await serviceSupabase
     .from('announcement_attachments')
     .select('filename, storage_path, mime_type')
     .eq('announcement_id', id)) as { data: any[] | null }
 
   const emailAttachments: Array<{ filename: string; content: Buffer; contentType?: string }> = []
   for (const att of attachments ?? []) {
-    const { data: fileData } = await (serviceSupabase as any).storage
+    const { data: fileData } = await serviceSupabase.storage
       .from('announcements').download(att.storage_path)
     if (fileData) {
       emailAttachments.push({
@@ -202,12 +194,12 @@ export async function sendAnnouncementAction(id: string) {
     }
   }
 
-  await supabase
+  await serviceSupabase
     .from('announcements')
     .update({ status: 'enviado', sent_at: new Date().toISOString(), recipient_count: sent } as never)
     .eq('id', id)
 
-  await (serviceSupabase as any).from('system_logs').insert({
+  await serviceSupabase.from('system_logs').insert({
     category: 'email_sent',
     status: sendErrors.length > 0 ? 'failure' : 'success',
     description: `Comunicado "${ann.subject}" enviado para ${sent} destinatário(s)${sendErrors.length > 0 ? ` — ${sendErrors.length} erro(s)` : ''}`,
@@ -219,6 +211,21 @@ export async function sendAnnouncementAction(id: string) {
     },
   } as never)
 
-  revalidatePath('/comunicados')
   return { success: true, sent }
+}
+
+export async function sendAnnouncementAction(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!['admin', 'gestor'].includes((profile as any)?.role)) {
+    return { error: 'Sem permissão para enviar comunicados' }
+  }
+
+  const serviceSupabase = await createServiceClient()
+  const result = await dispatchAnnouncement(serviceSupabase, id)
+  if ('success' in result) revalidatePath('/comunicados')
+  return result
 }
