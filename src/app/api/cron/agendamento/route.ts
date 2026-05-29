@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         .from('contacts').select('email')
         .eq('company_id', ticket.company_id).eq('is_active', true)
         .neq('id', ticket.contact_id)
-        .or('is_contract_responsible.eq.true,receives_ticket_cc.eq.true')
+        .eq('receives_ticket_cc', true)
       if ((mainContact as any)?.email) recipients.push((mainContact as any).email)
       for (const c of (extraContacts ?? []) as any[]) {
         if (c.email && !recipients.includes(c.email)) recipients.push(c.email)

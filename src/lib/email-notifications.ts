@@ -21,7 +21,7 @@ export async function resolveContactEmails(
     .eq('company_id', companyId)
     .eq('is_active', true)
     .neq('id', contactId)
-    .or('is_contract_responsible.eq.true,receives_ticket_cc.eq.true')
+    .eq('receives_ticket_cc', true)
 
   for (const c of (extras ?? []) as any[]) {
     if (c.email && !emails.includes(c.email)) emails.push(c.email)
