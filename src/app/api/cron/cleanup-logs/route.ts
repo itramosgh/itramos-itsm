@@ -11,14 +11,13 @@ export async function GET(request: Request) {
   const now = new Date()
   const cutoff7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const cutoff2d = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  const today = now.toISOString().slice(0, 10)
 
   const [logsResult, historyResult, pendingEmailsResult, pendingAlertsResult, holidayNoticesResult] = await Promise.all([
     supabase.from('system_logs').delete({ count: 'exact' }).lt('created_at', cutoff7d),
     supabase.from('url_check_history').delete({ count: 'exact' }).lt('checked_at', cutoff7d),
     supabase.from('pending_email_tickets' as never).delete({ count: 'exact' }).lt('created_at' as never, cutoff7d),
     supabase.from('pending_monitoring_alerts' as never).delete({ count: 'exact' }).lt('created_at' as never, cutoff2d),
-    supabase.from('holiday_notice_sent' as never).delete({ count: 'exact' }).lt('holiday_date' as never, today),
+    supabase.from('holiday_notice_sent' as never).delete({ count: 'exact' }).lt('sent_at' as never, cutoff7d),
   ])
 
   const errors = [logsResult, historyResult, pendingEmailsResult, pendingAlertsResult, holidayNoticesResult]
