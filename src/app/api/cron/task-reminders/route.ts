@@ -50,15 +50,20 @@ export async function GET(request: Request) {
     const dueDateFormatted = dueDate.toLocaleDateString('pt-BR', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     })
+    const diasRestantes = Math.round((dueDate.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
 
     try {
-      await sendEmailFromTemplate('lembrete_tarefa', email, {
+      const slug = isDueToday ? 'tarefa_vencimento_hoje' : 'tarefa_lembrete_x_dias'
+      const vars: Record<string, string> = {
         nome_responsavel: profile.full_name ?? '',
         titulo_tarefa: task.title,
-        data_vencimento: dueDateFormatted,
-        tipo_lembrete: isDueToday ? 'vence hoje' : `vence em ${task.reminder_days_before} dias`,
-        link_tarefas: `${process.env.NEXT_PUBLIC_APP_URL}/tarefas`,
-      })
+        link_tarefa: `${process.env.NEXT_PUBLIC_APP_URL}/tarefas`,
+      }
+      if (!isDueToday) {
+        vars.dias_restantes = String(diasRestantes)
+        vars.data_vencimento = dueDateFormatted
+      }
+      await sendEmailFromTemplate(slug, email, vars)
       remindersSent++
     } catch (e) {
       console.error(`Erro ao enviar lembrete tarefa ${task.id}:`, e)
