@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { AttachmentList } from '@/components/tickets/AttachmentList'
+import { DeleteArticleButton } from '@/components/conhecimento/DeleteArticleButton'
 
 export default async function ArtigoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,7 +24,10 @@ export default async function ArtigoPage({ params }: { params: Promise<{ id: str
     <div className="max-w-3xl space-y-6">
       <div className="flex items-start justify-between">
         <h1 className="text-2xl font-semibold">{article.title}</h1>
-        <Link href={`/conhecimento/artigos/${id}/editar`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Editar</Link>
+        <div className="flex gap-2">
+          <Link href={`/conhecimento/artigos/${id}/editar`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Editar</Link>
+          <DeleteArticleButton id={id} />
+        </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         {(article.tags ?? []).map((t: string) => (

@@ -58,7 +58,22 @@ export async function updateArticleAction(id: string, _prevState: unknown, formD
   if (error) return { error: error.message }
   revalidatePath('/conhecimento')
   revalidatePath(`/conhecimento/artigos/${id}`)
-  return { success: true }
+  return { success: true, articleId: id }
+}
+
+export async function deleteArticleAction(id: string) {
+  const supabase = await createClient()
+  const serviceSupabase = await createServiceClient()
+  const { data: attachments } = await supabase
+    .from('kb_article_attachments')
+    .select('storage_path')
+    .eq('article_id', id)
+  if (attachments?.length) {
+    await serviceSupabase.storage.from('kb-article-attachments').remove(attachments.map((a: any) => a.storage_path))
+    await supabase.from('kb_article_attachments').delete().eq('article_id', id)
+  }
+  await supabase.from('kb_articles').delete().eq('id', id)
+  revalidatePath('/conhecimento')
 }
 
 export async function toggleArticleActiveAction(id: string, isActive: boolean) {
