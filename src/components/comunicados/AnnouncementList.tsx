@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cancelAnnouncementAction } from '@/app/(internal)/comunicados/actions'
+import { DeleteAnnouncementButton } from './DeleteAnnouncementButton'
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   rascunho: { label: 'Rascunho', variant: 'secondary' },
@@ -53,14 +54,19 @@ export function AnnouncementList({ announcements, canManage }: {
                   {a.status === 'enviado' ? (a.recipient_count ?? '—') : '—'}
                 </td>
                 <td className="p-3 text-right">
-                  {canManage && ['rascunho', 'agendado'].includes(a.status) && (
-                    <div className="flex gap-1 justify-end">
-                      <Link href={`/comunicados/${a.id}`}>
-                        <Button variant="ghost" size="sm">Editar</Button>
-                      </Link>
-                      <form action={cancelAnnouncementAction.bind(null, a.id)}>
-                        <Button variant="ghost" size="sm" type="submit">Cancelar</Button>
-                      </form>
+                  {canManage && (
+                    <div className="flex gap-1 justify-end items-center">
+                      {['rascunho', 'agendado'].includes(a.status) && (
+                        <>
+                          <Link href={`/comunicados/${a.id}`}>
+                            <Button variant="ghost" size="sm">Editar</Button>
+                          </Link>
+                          <form action={cancelAnnouncementAction.bind(null, a.id)}>
+                            <Button variant="ghost" size="sm" type="submit">Cancelar</Button>
+                          </form>
+                        </>
+                      )}
+                      <DeleteAnnouncementButton id={a.id} />
                     </div>
                   )}
                 </td>

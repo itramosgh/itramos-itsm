@@ -87,8 +87,9 @@ export async function cancelAnnouncementAction(id: string) {
 }
 
 export async function deleteAnnouncementAction(id: string) {
-  const supabase = await createClient()
-  await supabase.from('announcements').delete().eq('id', id)
+  const serviceSupabase = await createServiceClient()
+  const { error } = await serviceSupabase.from('announcements').delete().eq('id', id)
+  if (error) throw new Error(error.message)
   revalidatePath('/comunicados')
 }
 
