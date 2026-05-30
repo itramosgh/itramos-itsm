@@ -38,6 +38,7 @@ export default async function DashboardPage() {
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
   const next14Days = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString()
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
+  const last7Days = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
 
   const role = profile?.role
   const isAnalista = role === 'analista'
@@ -60,6 +61,7 @@ export default async function DashboardPage() {
     { data: pendingBilling },
     { data: scheduledTickets },
     { data: recurrenceAlerts },
+    { data: recentFailures },
   ] = await Promise.all([
     isAnalista
       ? supabase.from('tasks').select('id, title, due_date, companies(name)')
@@ -147,7 +149,18 @@ export default async function DashboardPage() {
           .order('created_at', { ascending: false })
           .limit(5)
       : Promise.resolve({ data: [] }),
+    // Falhas de sistema nos últimos 7 dias (admin/gestor apenas)
+    !isAnalista
+      ? supabase
+          .from('system_logs')
+          .select('id, category, description, created_at')
+          .eq('status', 'failure')
+          .gte('created_at', last7Days)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] }),
   ]) as [
+    { data: any[] | null },
     { data: any[] | null },
     { data: any[] | null },
     { data: any[] | null },
@@ -164,12 +177,67 @@ export default async function DashboardPage() {
   const billing = pendingBilling ?? []
   const scheduled = scheduledTickets ?? []
   const recurrence = recurrenceAlerts ?? []
+  const failures = recentFailures ?? []
   const isEmpty = tasks.length === 0 && upcoming.length === 0 && meetings.length === 0
     && gmuds.length === 0 && billing.length === 0 && scheduled.length === 0 && recurrence.length === 0
+
+  const categoryLabels: Record<string, string> = {
+    email_sent: 'E-mail enviado',
+    email_received: 'E-mail recebido',
+    webhook_received: 'Webhook',
+    url_monitoring: 'Monitoramento',
+    cron_job: 'Cron',
+    approval: 'Aprovação',
+    auth: 'Autenticação',
+  }
 
   return (
     <div className="space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
+
+      {/* Falhas recentes (admin/gestor) */}
+      {!isAnalista && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-medium flex items-center gap-2">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${failures.length > 0 ? 'bg-red-500' : 'bg-green-500'}`} />
+              Falhas nos últimos 7 dias
+              {failures.length > 0 && (
+                <Badge variant="destructive" className="ml-1">{failures.length}</Badge>
+              )}
+            </h2>
+            <Link
+              href="/configuracoes/logs?status=failure"
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Ver todos os logs
+            </Link>
+          </div>
+          {failures.length === 0 ? (
+            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+              Nenhuma falha registrada nos últimos 7 dias.
+            </p>
+          ) : (
+            <div className="divide-y rounded-lg border border-red-200">
+              {(failures as any[]).map((log: any) => (
+                <div key={log.id} className="flex items-start justify-between px-4 py-3 gap-4 bg-red-50 hover:bg-red-100/60">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm truncate">{log.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline" className="border-red-300 text-red-700 text-xs whitespace-nowrap">
+                      {categoryLabels[log.category] ?? log.category}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDateTime(log.created_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {isEmpty ? (
         <p className="text-muted-foreground text-sm">
