@@ -13,6 +13,10 @@ export async function updateSettingsAction(formData: FormData) {
   // business_hours_days comes as multiple values in FormData
   raw.business_hours_days = formData.getAll('business_hours_days') as unknown as string
 
+  // BCC emails enviados como múltiplos valores
+  const bccRaw = formData.getAll('holiday_notice_bcc_emails')
+  raw.holiday_notice_bcc_emails = (bccRaw.length ? bccRaw : []) as unknown as string
+
   const parsed = platformSettingsSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 

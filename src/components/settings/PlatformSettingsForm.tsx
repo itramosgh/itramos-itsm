@@ -33,6 +33,11 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
   const [newContactError, setNewContactError] = useState('')
   const [newContactSaving, setNewContactSaving] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [bccEmails, setBccEmails] = React.useState<string[]>(
+    (initialData as any)?.holiday_notice_bcc_emails ?? []
+  )
+  const [bccInput, setBccInput] = React.useState('')
+  const [bccError, setBccError] = React.useState('')
 
   async function handleLogoUpload(file: File, variant: 'light' | 'dark') {
     const fd = new FormData()
@@ -47,6 +52,27 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
       else setLogoDarkUrl(data.url)
       setUploadError('')
     }
+  }
+
+  function addBccEmail() {
+    const email = bccInput.trim().toLowerCase()
+    if (!email) return
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setBccError('E-mail inválido')
+      return
+    }
+    if (bccEmails.includes(email)) {
+      setBccError('E-mail já adicionado')
+      return
+    }
+    setBccEmails(prev => [...prev, email])
+    setBccInput('')
+    setBccError('')
+  }
+
+  function removeBccEmail(email: string) {
+    setBccEmails(prev => prev.filter(e => e !== email))
   }
 
   const {
@@ -102,10 +128,14 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'business_hours_days' && Array.isArray(value)) {
         value.forEach((v) => formData.append('business_hours_days', String(v)))
+      } else if (key === 'holiday_notice_bcc_emails') {
+        // Gerenciado via state local bccEmails
       } else if (value !== undefined && value !== null) {
         formData.append(key, String(value))
       }
     })
+    // Append BCC emails from local state
+    bccEmails.forEach(email => formData.append('holiday_notice_bcc_emails', email))
 
     formData.append('logo_light_url', logoLightUrl)
     formData.append('logo_dark_url', logoDarkUrl)
@@ -297,6 +327,50 @@ export function PlatformSettingsForm({ initialData, monitoringContacts = [] }: P
             <label className="text-sm font-medium">Aviso de feriado (dias antes)</label>
             <input type="number" {...register('holiday_notice_days')} className="mt-1 block w-full border rounded-md px-3 py-2 text-sm" />
             {errors.holiday_notice_days && <p className="text-sm text-destructive mt-1">{errors.holiday_notice_days.message}</p>}
+          </div>
+          <div>
+            <label className="text-sm font-medium">E-mails BCC para avisos de feriado</label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Estes endereços recebem cópia oculta de cada aviso de feriado enviado.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={bccInput}
+                onChange={e => { setBccInput(e.target.value); setBccError('') }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBccEmail() } }}
+                placeholder="email@empresa.com.br"
+                className="flex-1 border rounded-md px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={addBccEmail}
+                className="text-sm border rounded-md px-3 py-2 hover:bg-muted whitespace-nowrap"
+              >
+                Adicionar
+              </button>
+            </div>
+            {bccError && <p className="text-xs text-destructive mt-1">{bccError}</p>}
+            {bccEmails.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {bccEmails.map(email => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => removeBccEmail(email)}
+                      className="ml-1 text-muted-foreground hover:text-destructive"
+                      aria-label={`Remover ${email}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium">Mínimo de chamados para recorrência</label>

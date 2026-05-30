@@ -10,6 +10,7 @@ export const platformSettingsSchema = z.object({
   email_from_address: z.string().email('E-mail de remetente inválido'),
   email_from_name: z.string().min(1, 'Nome do remetente é obrigatório'),
   holiday_notice_days: z.coerce.number().int().min(1).max(30),
+  holiday_notice_bcc_emails: z.array(z.string().email('E-mail inválido')).default([]),
   recurrence_min_tickets: z.coerce.number().int().min(2),
   recurrence_window_days: z.coerce.number().int().min(1),
   business_hours_start: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).transform(v => v.slice(0, 5)),
