@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { createHolidayAction, deleteHolidayAction } from './actions'
+import { createHolidayAction, getHolidayNoticeSummaryAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImportHolidaysButton } from './ImportHolidaysButton'
+import { HolidayRow } from './HolidayRow'
 
 const typeLabels: Record<string, string> = {
   nacional: 'Nacional',
@@ -18,6 +19,8 @@ export default async function FeriadosPage() {
     .select('id, date, name, type')
     .order('date')
     .limit(500)) as { data: any[] | null }
+
+  const noticeCounts = await getHolidayNoticeSummaryAction()
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -58,21 +61,18 @@ export default async function FeriadosPage() {
               <th className="p-3 text-left">Data</th>
               <th className="p-3 text-left">Nome</th>
               <th className="p-3 text-left">Tipo</th>
+              <th className="p-3 text-left">Avisos</th>
               <th className="p-3" />
             </tr>
           </thead>
           <tbody>
             {(holidays ?? []).map((h: any) => (
-              <tr key={h.id} className="border-b">
-                <td className="p-3">{new Date(h.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                <td className="p-3">{h.name}</td>
-                <td className="p-3 text-muted-foreground text-xs">{typeLabels[h.type] ?? h.type}</td>
-                <td className="p-3">
-                  <form action={deleteHolidayAction.bind(null, h.id)}>
-                    <Button variant="ghost" size="sm" type="submit">Remover</Button>
-                  </form>
-                </td>
-              </tr>
+              <HolidayRow
+                key={h.id}
+                holiday={h}
+                typeLabel={typeLabels[h.type] ?? h.type}
+                sentCount={noticeCounts[h.id] ?? 0}
+              />
             ))}
           </tbody>
         </table>
