@@ -8,6 +8,7 @@ export interface SendEmailParams {
   html: string
   from: string
   replyTo?: string
+  bcc?: string[]
   attachments?: Array<{ filename: string; content: Buffer | Uint8Array; contentType?: string }>
 }
 
@@ -18,6 +19,7 @@ export async function sendEmail(params: SendEmailParams): Promise<string | null>
     subject: params.subject,
     html: params.html,
     ...(params.replyTo ? { reply_to: params.replyTo } : {}),
+    ...(params.bcc?.length ? { bcc: params.bcc } : {}),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(params.attachments ? { attachments: params.attachments as any } : {}),
   })
