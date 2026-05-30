@@ -55,6 +55,7 @@ export async function sendHolidayNoticesForHoliday(
 
   let sent = 0
   let skipped = 0
+  let bccSent = false
 
   for (const contact of targets as any[]) {
     try {
@@ -66,13 +67,14 @@ export async function sendHolidayNoticesForHoliday(
           data_feriado: formattedDate,
           nome_feriado: (holiday as any).name,
         },
-        { bcc: bccEmails }
+        { bcc: bccSent ? [] : bccEmails }
       )
 
       await serviceClient
         .from('holiday_notice_sent')
         .insert({ holiday_id: holidayId, contact_id: contact.id } as never)
 
+      bccSent = true
       sent++
     } catch (e) {
       console.error(`Erro ao enviar aviso feriado ${(holiday as any).name} para ${contact.email}:`, e)
