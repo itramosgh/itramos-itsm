@@ -95,6 +95,9 @@ export function Sidebar({ appName, logoUrl, isOpen = false, onClose }: SidebarPr
       }
       return { ...prev, ...updates }
     })
+  }, [pathname])
+
+  useEffect(() => {
     onClose?.()
   }, [pathname, onClose])
 
