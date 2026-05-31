@@ -192,7 +192,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6 sm:space-y-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       {/* Falhas recentes (admin/gestor) */}
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
                     <Badge variant="outline" className="border-red-300 text-red-700 text-xs whitespace-nowrap">
                       {categoryLabels[log.category] ?? log.category}
                     </Badge>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
                       {formatDateTime(log.created_at)}
                     </span>
                   </div>
@@ -273,7 +273,7 @@ export default async function DashboardPage() {
                         {isUrgent && (
                           <Badge variant="destructive" className="whitespace-nowrap">Próximas 2h</Badge>
                         )}
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
                           {t.scheduled_at ? formatDateTime(t.scheduled_at) : '—'}
                         </span>
                       </div>
@@ -411,7 +411,7 @@ export default async function DashboardPage() {
                         {(meeting.companies as any)?.name ?? '—'}
                       </span>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
+                    <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
                       {formatDateTime(meeting.scheduled_at)}
                     </span>
                   </div>
