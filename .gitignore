@@ -39,3 +39,15 @@ next-env.d.ts
 # tools
 .claude/
 .serena/
+
+# playwright mcp (logs e snapshots locais)
+.playwright-mcp/
+
+# ai development artifacts (planos e specs — não são código da aplicação)
+docs/superpowers/
+
+# screenshots e artefatos de teste
+*.png
+!logo/*.png
+!public/**/*.png
+!src/**/*.png
