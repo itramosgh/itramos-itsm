@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   const supabase = await createServiceClient()
 
   const now = new Date()
-  const windowStart = new Date(now.getTime() + 23 * 60 * 60 * 1000) // now + 23h
-  const windowEnd = new Date(now.getTime() + 26 * 60 * 60 * 1000)   // now + 26h
+  const windowStart = new Date(now.getTime() + 2 * 60 * 60 * 1000)  // now + 2h
+  const windowEnd = new Date(now.getTime() + 30 * 60 * 60 * 1000)  // now + 30h
 
   const { data: meetings, error: meetingsError } = await supabase
     .from('meetings')
