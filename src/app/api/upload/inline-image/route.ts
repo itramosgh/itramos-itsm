@@ -6,6 +6,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const BUCKET_MAP: Record<string, string> = {
   'kb-article': 'kb-article-attachments',
   'kb-document': 'kb-documents',
+  'announcement': 'announcements',
 }
 
 export async function POST(request: Request) {

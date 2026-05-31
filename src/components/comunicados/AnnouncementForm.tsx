@@ -1,11 +1,22 @@
 'use client'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { saveBodyAction, sendAnnouncementAction } from '@/app/(internal)/comunicados/actions'
 import { AnnouncementAttachments } from '@/components/comunicados/AnnouncementAttachments'
+import { ResizableImage } from '@/components/conhecimento/ResizableImage'
+
+async function uploadImage(file: File): Promise<string | null> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('type', 'announcement')
+  const res = await fetch('/api/upload/inline-image', { method: 'POST', body: fd })
+  const data = await res.json()
+  if (!res.ok) { window.alert(data?.error ?? 'Erro ao fazer upload da imagem.'); return null }
+  return data.url ?? null
+}
 
 export function AnnouncementForm({ announcementId, initialBodyHtml = '', initialBodyRichText, readOnly = false }: {
   announcementId: string
@@ -17,9 +28,10 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const imgInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, ResizableImage],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     content: (initialBodyRichText as any) ?? initialBodyHtml,
     editable: !readOnly,
@@ -27,8 +39,30 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
       attributes: {
         class: 'prose prose-sm max-w-none min-h-[200px] p-3 focus:outline-none',
       },
+      handlePaste(view, event) {
+        const items = event.clipboardData?.items
+        if (!items) return false
+        for (const item of Array.from(items)) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile()
+            if (file) {
+              event.preventDefault()
+              uploadImage(file).then(url => {
+                if (url) editor?.chain().focus().setImage({ src: url }).run()
+              })
+              return true
+            }
+          }
+        }
+        return false
+      },
     },
   })
+
+  async function handleImageFile(file: File) {
+    const url = await uploadImage(file)
+    if (url) editor?.chain().focus().setImage({ src: url }).run()
+  }
 
   async function handleSave() {
     if (!editor) return
@@ -83,6 +117,19 @@ export function AnnouncementForm({ announcementId, initialBodyHtml = '', initial
                 onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 className={`px-2 py-1 text-sm rounded ${editor?.isActive('orderedList') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
               >1. Lista</button>
+              <button
+                type="button"
+                onClick={() => imgInputRef.current?.click()}
+                className="px-2 py-1 text-sm rounded hover:bg-muted"
+                title="Inserir imagem"
+              >🖼 Imagem</button>
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = '' }}
+              />
             </div>
           )}
           <EditorContent editor={editor} />
