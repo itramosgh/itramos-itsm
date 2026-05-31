@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const MAX_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -9,8 +9,8 @@ const BUCKET_MAP: Record<string, string> = {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createServiceClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const formData = await request.formData()
@@ -27,13 +27,14 @@ export async function POST(request: Request) {
   const buffer = await file.arrayBuffer()
   const bucket = BUCKET_MAP[type]
 
-  const { error: uploadError } = await supabase.storage
+  const serviceClient = await createServiceClient()
+  const { error: uploadError } = await serviceClient.storage
     .from(bucket)
     .upload(path, buffer, { contentType: file.type })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
+  const { data: urlData } = serviceClient.storage.from(bucket).getPublicUrl(path)
 
   return NextResponse.json({ url: urlData.publicUrl })
 }

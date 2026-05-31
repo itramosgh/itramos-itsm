@@ -28,8 +28,8 @@ async function uploadImage(file: File, type: string): Promise<string | null> {
   fd.append('file', file)
   fd.append('type', type)
   const res = await fetch('/api/upload/inline-image', { method: 'POST', body: fd })
-  if (!res.ok) return null
   const data = await res.json()
+  if (!res.ok) { window.alert(data?.error ?? 'Erro ao fazer upload da imagem.'); return null }
   return data.url ?? null
 }
 
