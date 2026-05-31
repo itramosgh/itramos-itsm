@@ -36,7 +36,7 @@ export function TicketTimelineChart({ data, average, currentMonth }: Props) {
         />
         <Tooltip
           cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-          formatter={(value: number) => [value, 'Chamados abertos']}
+          formatter={(value) => [value, 'Chamados abertos']}
           labelStyle={{ fontWeight: 600, marginBottom: 4 }}
           contentStyle={{ borderRadius: 6, fontSize: 12, border: '1px solid #e5e7eb' }}
         />
