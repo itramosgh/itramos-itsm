@@ -75,9 +75,11 @@ function getInitialOpenGroups(pathname: string): Record<string, boolean> {
 interface SidebarProps {
   appName?: string | null
   logoUrl?: string | null
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function Sidebar({ appName, logoUrl }: SidebarProps) {
+export function Sidebar({ appName, logoUrl, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState<Record<string, boolean>>(
     () => getInitialOpenGroups(pathname)
@@ -93,14 +95,20 @@ export function Sidebar({ appName, logoUrl }: SidebarProps) {
       }
       return { ...prev, ...updates }
     })
-  }, [pathname])
+    onClose?.()
+  }, [pathname, onClose])
 
   function toggle(label: string) {
     setOpen(prev => ({ ...prev, [label]: !prev[label] }))
   }
 
   return (
-    <aside className="w-64 border-r bg-background h-screen flex flex-col">
+    <aside className={[
+      'fixed inset-y-0 left-0 z-50 w-64 border-r bg-background h-screen flex flex-col',
+      'transform transition-transform duration-200 ease-in-out',
+      'md:relative md:z-auto md:translate-x-0',
+      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+    ].join(' ')}>
       <div className="h-14 px-4 border-b flex items-center">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
