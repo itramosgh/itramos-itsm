@@ -40,7 +40,7 @@ function ResizableImageComponent({ node, updateAttributes, selected }: NodeViewP
       style={{
         display: 'inline-block',
         position: 'relative',
-        width: width ?? 'auto',
+        width: width ?? undefined,
         maxWidth: '100%',
         verticalAlign: 'bottom',
       }}
@@ -50,7 +50,7 @@ function ResizableImageComponent({ node, updateAttributes, selected }: NodeViewP
         alt={node.attrs.alt ?? ''}
         title={node.attrs.title ?? undefined}
         draggable={false}
-        style={{ display: 'block', width: '100%' }}
+        style={{ display: 'block', width: width ? '100%' : 'auto', maxWidth: '100%' }}
         className={selected ? 'outline outline-2 outline-offset-1 outline-blue-600' : ''}
       />
       {selected && (
