@@ -40,13 +40,23 @@ export default async function ArtigoPage({ params }: { params: Promise<{ id: str
       {article.problem_description && (
         <section>
           <h2 className="text-lg font-medium mb-2">Descrição do problema</h2>
-          <p className="whitespace-pre-wrap text-muted-foreground">{article.problem_description}</p>
+          {article.problem_description.includes('<') ? (
+            <div className="prose prose-sm max-w-none text-muted-foreground"
+              dangerouslySetInnerHTML={{ __html: article.problem_description }} />
+          ) : (
+            <p className="whitespace-pre-wrap text-muted-foreground">{article.problem_description}</p>
+          )}
         </section>
       )}
       {article.solution && (
         <section>
           <h2 className="text-lg font-medium mb-2">Solução aplicada</h2>
-          <p className="whitespace-pre-wrap">{article.solution}</p>
+          {article.solution.includes('<') ? (
+            <div className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: article.solution }} />
+          ) : (
+            <p className="whitespace-pre-wrap">{article.solution}</p>
+          )}
         </section>
       )}
       {(attachments ?? []).length > 0 && (

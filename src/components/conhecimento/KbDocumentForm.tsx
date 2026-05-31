@@ -1,6 +1,7 @@
 'use client'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,16 @@ interface KbDocumentFormProps {
   attachments?: { id: string; filename: string; storage_path: string }[]
 }
 
+async function uploadImage(file: File): Promise<string | null> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('type', 'kb-document')
+  const res = await fetch('/api/upload/inline-image', { method: 'POST', body: fd })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.url ?? null
+}
+
 export function KbDocumentForm({
   action,
   documentId,
@@ -34,14 +45,37 @@ export function KbDocumentForm({
   const [error, setError] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imgInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Image],
     content: (initialData?.content_rich_text as any) ?? initialData?.content_html ?? '',
     editorProps: {
       attributes: { class: 'prose prose-sm max-w-none min-h-[200px] p-3 focus:outline-none' },
+      handlePaste(view, event) {
+        const items = event.clipboardData?.items
+        if (!items) return false
+        for (const item of Array.from(items)) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile()
+            if (file) {
+              event.preventDefault()
+              uploadImage(file).then(url => {
+                if (url) editor?.chain().focus().setImage({ src: url }).run()
+              })
+              return true
+            }
+          }
+        }
+        return false
+      },
     },
   })
+
+  async function handleImageFile(file: File) {
+    const url = await uploadImage(file)
+    if (url) editor?.chain().focus().setImage({ src: url }).run()
+  }
 
   async function handleUpload(file: File, docId: string) {
     setUploadingFile(true)
@@ -112,7 +146,7 @@ export function KbDocumentForm({
       <div>
         <Label>Conteúdo</Label>
         <div className="border rounded-md overflow-hidden">
-          <div className="flex gap-1 p-2 border-b bg-muted/50">
+          <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/50">
             <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()}
               className={`px-2 py-1 text-sm rounded ${editor?.isActive('bold') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
               <strong>B</strong>
@@ -125,6 +159,29 @@ export function KbDocumentForm({
               className={`px-2 py-1 text-sm rounded ${editor?.isActive('bulletList') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
               Lista
             </button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              className={`px-2 py-1 text-sm rounded ${editor?.isActive('orderedList') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+              1. Lista
+            </button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+              className={`px-2 py-1 text-sm rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+              H2
+            </button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+              className={`px-2 py-1 text-sm rounded ${editor?.isActive('heading', { level: 3 }) ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+              H3
+            </button>
+            <button type="button" onClick={() => imgInputRef.current?.click()}
+              className="px-2 py-1 text-sm rounded hover:bg-muted" title="Inserir imagem">
+              🖼 Imagem
+            </button>
+            <input
+              ref={imgInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = '' }}
+            />
           </div>
           <EditorContent editor={editor} />
         </div>
