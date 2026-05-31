@@ -10,13 +10,15 @@ const CHANNEL_LABELS: Record<string, string> = {
 }
 
 const MONITORING_CHANNELS = ['zabbix', 'azure_monitor', 'url_monitoring']
+const PAGE_SIZE = 50
 
 export default async function DashboardMonitoramentoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>
+  searchParams: Promise<{ from?: string; to?: string; page?: string }>
 }) {
-  const { from, to } = await searchParams
+  const { from, to, page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +31,6 @@ export default async function DashboardMonitoramentoPage({
   const fromDate = from ?? new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
   const toDate = to ?? new Date().toISOString().slice(0, 10)
 
-  // Verificar se há integrações ativas
   const [{ data: integrations }, { data: urls }] = await Promise.all([
     supabase.from('monitoring_integrations').select('id').eq('is_active', true).limit(1),
     supabase.from('monitored_urls').select('id').eq('is_active', true).limit(1),
@@ -51,18 +52,43 @@ export default async function DashboardMonitoramentoPage({
     )
   }
 
-  const { data: ticketsRaw } = await supabase
-    .from('tickets')
-    .select('id, number, title, status, channel, priority, created_at, closed_at, company_id, assigned_to, companies(name), profiles!assigned_to(full_name)')
-    .in('channel', MONITORING_CHANNELS)
-    .gte('created_at', `${fromDate}T00:00:00Z`)
-    .lte('created_at', `${toDate}T23:59:59Z`)
-    .order('created_at', { ascending: false })
-    .limit(2000) as any
+  const rangeFrom = (page - 1) * PAGE_SIZE
+  const rangeTo = rangeFrom + PAGE_SIZE - 1
 
-  const tickets: any[] = ticketsRaw ?? []
+  function pageUrl(p: number) {
+    const params = new URLSearchParams()
+    params.set('from', fromDate)
+    params.set('to', toDate)
+    if (p > 1) params.set('page', String(p))
+    return `/relatorios/monitoramento?${params.toString()}`
+  }
 
-  // MTTR: média de tempo para resolver/fechar chamados com closed_at
+  const [
+    { data: kpiRaw },
+    { data: tableRaw, count: totalCount },
+  ] = await Promise.all([
+    supabase
+      .from('tickets')
+      .select('id, number, title, status, channel, created_at, closed_at, companies(name)')
+      .in('channel', MONITORING_CHANNELS)
+      .gte('created_at', `${fromDate}T00:00:00Z`)
+      .lte('created_at', `${toDate}T23:59:59Z`)
+      .limit(5000) as any,
+    supabase
+      .from('tickets')
+      .select('id, number, title, status, channel, priority, created_at, closed_at, company_id, assigned_to, companies(name), profiles!assigned_to(full_name)', { count: 'exact' })
+      .in('channel', MONITORING_CHANNELS)
+      .gte('created_at', `${fromDate}T00:00:00Z`)
+      .lte('created_at', `${toDate}T23:59:59Z`)
+      .order('created_at', { ascending: false })
+      .range(rangeFrom, rangeTo) as any,
+  ])
+
+  const tickets: any[] = kpiRaw ?? []
+  const tableTickets: any[] = tableRaw ?? []
+  const total = totalCount ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
   const closedTickets = tickets.filter((t: any) => t.closed_at)
   const mttrMs = closedTickets.length > 0
     ? closedTickets.reduce((acc: number, t: any) => {
@@ -71,18 +97,15 @@ export default async function DashboardMonitoramentoPage({
     : null
   const mttrHours = mttrMs !== null ? (mttrMs / 3_600_000) : null
 
-  // Chamados abertos de monitoramento (ainda em aberto)
   const openTickets = tickets.filter((t: any) =>
     !['fechado', 'resolvido'].includes(t.status)
   )
 
-  // Distribuição por conector
   const byChannel: Record<string, number> = {}
   tickets.forEach((t: any) => {
     byChannel[t.channel] = (byChannel[t.channel] ?? 0) + 1
   })
 
-  // Distribuição por cliente
   const byCompany: Record<string, number> = {}
   tickets.forEach((t: any) => {
     const name = (t.companies as any)?.name ?? 'Desconhecido'
@@ -98,6 +121,16 @@ export default async function DashboardMonitoramentoPage({
     resolvido: 'secondary',
     fechado: 'secondary',
     reaberto: 'destructive',
+  }
+
+  function pageNumbers(current: number, totalPg: number): (number | '…')[] {
+    if (totalPg <= 7) return Array.from({ length: totalPg }, (_, i) => i + 1)
+    const pages: (number | '…')[] = [1]
+    if (current > 3) pages.push('…')
+    for (let p = Math.max(2, current - 1); p <= Math.min(totalPg - 1, current + 1); p++) pages.push(p)
+    if (current < totalPg - 2) pages.push('…')
+    pages.push(totalPg)
+    return pages
   }
 
   return (
@@ -122,7 +155,6 @@ export default async function DashboardMonitoramentoPage({
         </form>
       </div>
 
-      {/* Métricas principais */}
       <section>
         <h2 className="text-base font-medium mb-3">Métricas do período</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -147,7 +179,6 @@ export default async function DashboardMonitoramentoPage({
         </div>
       </section>
 
-      {/* Por conector */}
       <section>
         <h2 className="text-base font-medium mb-3">Alertas por conector</h2>
         <div className="grid grid-cols-3 gap-3">
@@ -161,7 +192,6 @@ export default async function DashboardMonitoramentoPage({
       </section>
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Por cliente */}
         <section>
           <h2 className="text-base font-medium mb-3">Alertas por cliente</h2>
           {companyDist.length === 0 ? (
@@ -178,7 +208,6 @@ export default async function DashboardMonitoramentoPage({
           )}
         </section>
 
-        {/* Chamados ainda abertos */}
         <section>
           <h2 className="text-base font-medium mb-3">
             Chamados abertos ({openTickets.length})
@@ -206,10 +235,14 @@ export default async function DashboardMonitoramentoPage({
         </section>
       </div>
 
-      {/* Tabela completa de alertas */}
-      {tickets.length > 0 && (
+      {total > 0 && (
         <section>
-          <h2 className="text-base font-medium mb-3">Todos os alertas do período</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-medium">Todos os alertas do período</h2>
+            <span className="text-sm text-muted-foreground">
+              {rangeFrom + 1}–{Math.min(rangeTo + 1, total)} de {total} alertas
+            </span>
+          </div>
           <div className="border rounded-md overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted">
@@ -224,7 +257,7 @@ export default async function DashboardMonitoramentoPage({
                 </tr>
               </thead>
               <tbody>
-                {tickets.slice(0, 50).map((t: any) => {
+                {tableTickets.map((t: any) => {
                   const resolveMs = t.closed_at
                     ? new Date(t.closed_at).getTime() - new Date(t.created_at).getTime()
                     : null
@@ -254,6 +287,38 @@ export default async function DashboardMonitoramentoPage({
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 mt-4">
+              <Link
+                href={pageUrl(page - 1)}
+                aria-disabled={page <= 1}
+                className={`px-3 py-1.5 rounded text-sm border ${page <= 1 ? 'pointer-events-none opacity-40' : 'hover:bg-muted'}`}
+              >
+                ←
+              </Link>
+              {pageNumbers(page, totalPages).map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-sm text-muted-foreground">…</span>
+                ) : (
+                  <Link
+                    key={p}
+                    href={pageUrl(p as number)}
+                    className={`px-3 py-1.5 rounded text-sm border ${p === page ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}`}
+                  >
+                    {p}
+                  </Link>
+                )
+              )}
+              <Link
+                href={pageUrl(page + 1)}
+                aria-disabled={page >= totalPages}
+                className={`px-3 py-1.5 rounded text-sm border ${page >= totalPages ? 'pointer-events-none opacity-40' : 'hover:bg-muted'}`}
+              >
+                →
+              </Link>
+            </div>
+          )}
         </section>
       )}
     </div>
