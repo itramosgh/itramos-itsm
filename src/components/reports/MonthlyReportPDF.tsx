@@ -93,11 +93,10 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 8, color: palette.muted },
   // Timeline chart
-  timelineWrap: { position: 'relative', height: 72 },
-  timelineBars: { flexDirection: 'row', height: 72, alignItems: 'flex-end', gap: 2 },
-  timelineBar: { flex: 1, alignItems: 'center', height: 72, justifyContent: 'flex-end' },
+  timelineWrap: { position: 'relative', height: 84 },
+  timelineBars: { flexDirection: 'row', height: 84, alignItems: 'flex-end', gap: 2 },
+  timelineBar: { flex: 1, alignItems: 'center', height: 84, justifyContent: 'flex-end' },
   timelineAvgLine: { position: 'absolute', left: 0, right: 0, height: 0.5, backgroundColor: '#6366f1' },
-  timelineAvgLabel: { position: 'absolute', right: 2, fontSize: 6, color: '#6366f1' },
 })
 
 function BarChart({ data, total }: { data: { label: string; count: number }[]; total: number }) {
@@ -119,8 +118,10 @@ function BarChart({ data, total }: { data: { label: string; count: number }[]; t
   )
 }
 
-const BAR_AREA_H = 60
-const LABEL_H = 12
+const BAR_AREA_H = 58   // height of the bar drawing area
+const LABEL_H = 12      // height for month labels below bars
+const COUNT_H = 14      // height for count labels above bars
+const CHART_H = BAR_AREA_H + LABEL_H + COUNT_H  // = 84, matches timelineWrap height
 
 function TimelineBarChart({ data, average, reportedMonth }: {
   data: MonthTrend[]
@@ -128,40 +129,66 @@ function TimelineBarChart({ data, average, reportedMonth }: {
   reportedMonth: string
 }) {
   const max = Math.max(...data.map(d => d.count), 1)
-  const avgLineBottom = LABEL_H + (average / max) * BAR_AREA_H
-  const avgLabel = average % 1 === 0 ? String(average) : average.toFixed(1)
+  const avgLineBottom = LABEL_H + Math.round((average / max) * BAR_AREA_H)
+  const avgLabel = average % 1 === 0 ? String(Math.round(average)) : average.toFixed(1)
 
   return (
     <View style={s.timelineWrap}>
-      <View style={[s.timelineAvgLine, { bottom: avgLineBottom }]} />
-      <Text style={[s.timelineAvgLabel, { bottom: avgLineBottom + 2 }]}>
-        Média: {avgLabel}/mês
-      </Text>
+      {/* Bars rendered first */}
       <View style={s.timelineBars}>
         {data.map(d => {
-          const barH = d.count > 0 ? Math.max((d.count / max) * BAR_AREA_H, 1.5) : 0
+          const barH = d.count > 0 ? Math.max(Math.round((d.count / max) * BAR_AREA_H), 2) : 0
           const isReported = d.month === reportedMonth
           return (
             <View key={d.month} style={s.timelineBar}>
+              {/* Count above bar */}
+              {d.count > 0 && (
+                <Text style={{
+                  position: 'absolute',
+                  bottom: LABEL_H + barH + 1,
+                  fontSize: 5.5,
+                  color: isReported ? '#1e3a8a' : '#6b7280',
+                  textAlign: 'center',
+                  width: '100%',
+                }}>
+                  {d.count}
+                </Text>
+              )}
+              {/* Bar */}
               <View style={{
-                width: '82%',
+                width: '80%',
                 height: barH,
                 backgroundColor: isReported ? '#1e40af' : '#bfdbfe',
                 borderRadius: 1,
                 marginBottom: LABEL_H,
               }} />
+              {/* Month label */}
               <Text style={{
                 position: 'absolute',
                 bottom: 0,
                 fontSize: 5.5,
                 color: isReported ? '#1e40af' : '#9ca3af',
                 textAlign: 'center',
+                width: '100%',
               }}>
                 {d.label}
               </Text>
             </View>
           )
         })}
+      </View>
+
+      {/* Avg line and label rendered AFTER bars — renders on top */}
+      <View style={[s.timelineAvgLine, { bottom: avgLineBottom }]} />
+      <View style={{
+        position: 'absolute',
+        right: 0,
+        bottom: avgLineBottom + 2,
+        backgroundColor: 'white',
+        paddingHorizontal: 2,
+        paddingVertical: 1,
+      }}>
+        <Text style={{ fontSize: 6, color: '#6366f1' }}>Média: {avgLabel}/mês</Text>
       </View>
     </View>
   )
@@ -293,7 +320,7 @@ export function MonthlyReportPDF({
               <Text style={[s.th, { flex: 1.5 }]}>Analista</Text>
               <Text style={[s.th, { width: 60 }]}>Status</Text>
             </View>
-            {tickets.slice(0, 80).map((t, i) => (
+            {tickets.slice(0, 150).map((t, i) => (
               <View key={t.number} style={t.reopened ? s.tableRowAlt : i % 2 === 0 ? s.tableRow : [s.tableRow, { backgroundColor: palette.bg }]}>
                 <Text style={[s.td, { width: 30 }]}>{t.number}</Text>
                 <Text style={[s.td, { flex: 3 }]}>{trunc(t.title, 60)}</Text>
@@ -306,9 +333,9 @@ export function MonthlyReportPDF({
               </View>
             ))}
           </View>
-          {tickets.length > 80 && (
+          {tickets.length > 150 && (
             <Text style={{ fontSize: 8, color: palette.muted, marginTop: 4 }}>
-              Exibindo 80 de {tickets.length} chamados.
+              Exibindo 150 de {tickets.length} chamados.
             </Text>
           )}
         </View>
