@@ -1,49 +1,27 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAnnouncementAction } from '../actions'
-import { RecipientSelector } from '@/components/comunicados/RecipientSelector'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { redirect } from 'next/navigation'
+import { NovoComunicadoForm } from '@/components/comunicados/NovoComunicadoForm'
 
-export default async function NovoComunicadoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>
-}) {
-  const { error } = await searchParams
+export default async function NovoComunicadoPage() {
   const supabase = await createClient()
-  const { data: companies } = (await supabase
-    .from('companies').select('id, name').eq('is_active', true).order('name')) as { data: { id: string; name: string }[] | null }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  async function handleCreate(formData: FormData) {
-    'use server'
-    if (!formData.get('body_html')) formData.set('body_html', '<p></p>')
-    const result = await createAnnouncementAction(formData)
-    if (result.success && result.id) redirect(`/comunicados/${result.id}`)
-    redirect(`/comunicados/novo?error=${encodeURIComponent((result as any).error ?? 'Erro ao criar comunicado')}`)
-  }
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single() as { data: any }
+  if (!['admin', 'gestor'].includes(profile?.role)) redirect('/dashboard')
+
+  const [{ data: companies }, { data: contacts }] = await Promise.all([
+    supabase.from('companies').select('id, name').eq('is_active', true).order('name') as unknown as Promise<{ data: { id: string; name: string }[] | null }>,
+    supabase.from('contacts').select('id, full_name, email').eq('is_active', true).order('full_name') as unknown as Promise<{ data: { id: string; full_name: string; email: string }[] | null }>,
+  ])
 
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-semibold">Novo Comunicado</h1>
-      {error && (
-        <div className="rounded-md bg-destructive/10 text-destructive text-sm px-4 py-3">
-          {error}
-        </div>
-      )}
-      <form action={handleCreate} className="space-y-4">
-        <div>
-          <Label>Assunto</Label>
-          <Input name="subject" placeholder="Assunto do e-mail" required />
-        </div>
-        <RecipientSelector companies={companies ?? []} />
-        <div>
-          <Label>Agendamento (opcional)</Label>
-          <Input name="scheduled_at" type="datetime-local" />
-        </div>
-        <Button type="submit">Criar e editar conteúdo</Button>
-      </form>
+      <NovoComunicadoForm
+        companies={companies ?? []}
+        contacts={contacts ?? []}
+      />
     </div>
   )
 }
