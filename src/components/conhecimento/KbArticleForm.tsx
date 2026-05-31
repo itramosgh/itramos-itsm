@@ -1,7 +1,7 @@
 'use client'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
+import { ResizableImage } from './ResizableImage'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -88,7 +88,7 @@ export function KbArticleForm({ action, initialData, categories }: KbArticleForm
   const isEdit = !!initialData
 
   const problemEditor = useEditor({
-    extensions: [StarterKit, Image],
+    extensions: [StarterKit, ResizableImage],
     content: initialData?.problem_description ?? '',
     editorProps: {
       attributes: { class: 'prose prose-sm max-w-none min-h-[120px] p-3 focus:outline-none' },
@@ -113,7 +113,7 @@ export function KbArticleForm({ action, initialData, categories }: KbArticleForm
   })
 
   const solutionEditor = useEditor({
-    extensions: [StarterKit, Image],
+    extensions: [StarterKit, ResizableImage],
     content: initialData?.solution ?? '',
     editorProps: {
       attributes: { class: 'prose prose-sm max-w-none min-h-[160px] p-3 focus:outline-none' },

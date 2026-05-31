@@ -1,7 +1,7 @@
 'use client'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
+import { ResizableImage } from './ResizableImage'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -48,7 +48,7 @@ export function KbDocumentForm({
   const imgInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
-    extensions: [StarterKit, Image],
+    extensions: [StarterKit, ResizableImage],
     content: (initialData?.content_rich_text as any) ?? initialData?.content_html ?? '',
     editorProps: {
       attributes: { class: 'prose prose-sm max-w-none min-h-[200px] p-3 focus:outline-none' },
