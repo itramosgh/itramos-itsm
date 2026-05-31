@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { HeaderClient } from './HeaderClient'
@@ -16,10 +16,21 @@ export function InternalShell({ appName, logoUrl, profileName, children }: Inter
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   const openSidebar = useCallback(() => setSidebarOpen(true), [])
 
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSidebar()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [sidebarOpen, closeSidebar])
+
   return (
     <div className="flex h-screen">
       {sidebarOpen && (
         <div
+          role="presentation"
+          aria-hidden="true"
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
           onClick={closeSidebar}
         />
