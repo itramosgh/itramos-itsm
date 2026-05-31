@@ -51,3 +51,6 @@ docs/superpowers/
 !logo/*.png
 !public/**/*.png
 !src/**/*.png
+
+# pasta local para compartilhar prints/erros com o claude
+.erro/

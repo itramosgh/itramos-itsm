@@ -109,6 +109,16 @@ O projeto usa **Zod v4**. Atenção à API quebrada em relação ao v3: `z.recor
 
 **Padrão de queries Supabase com TypeScript:** queries em tabelas com tipos complexos (ex: `email_templates`, `platform_settings`) frequentemente retornam `never` na inferência. Usar `as any` nesses casos — padrão estabelecido no projeto.
 
+### Relatórios (`src/app/(internal)/relatorios/`)
+
+**Relatório Personalizado (`/relatorios/personalizado`):** paginação server-side com `PAGE_SIZE = 50`. Usa duas queries separadas: uma leve para KPIs (limit 5000, sem joins) e outra paginada com `{ count: 'exact' }` + `.range(from, to)` para a tabela. O parâmetro `page` vem de `searchParams`.
+
+**Relatório Mensal PDF:** existem **duas rotas independentes** que geram o mesmo PDF — ambas precisam ser atualizadas quando o componente mudar:
+- `src/app/(internal)/relatorios/mensal/actions.ts` — função `buildReportData`, usada pelo envio por e-mail
+- `src/app/api/reports/monthly/route.ts` — rota GET, usada pelo download (a action `downloadReport` apenas faz `redirect()` para cá)
+
+O PDF é gerado com `@react-pdf/renderer`. **Importante:** esse renderer não aceita Recharts nem SVG DOM — gráficos devem ser construídos com primitivos `View` + `Text` + `position: 'absolute'`. O componente `TimelineBarChart` em `src/components/reports/MonthlyReportPDF.tsx` é o exemplo de referência. Z-order em react-pdf segue ordem do JSX (elementos depois ficam na frente), não z-index.
+
 ### Tests
 
 Ficam em `tests/` (não colocados). Usam Vitest com `environment: 'node'`. Testes de integração conectam ao Supabase local — rodar `npm run supabase:start` antes.
