@@ -54,8 +54,8 @@ export default async function ChamadosPage({
         <Link href="/chamados/novo" className={buttonVariants()}>+ Novo chamado</Link>
       </div>
       <form className="flex gap-2 flex-wrap">
-        <Input name="q" defaultValue={q} placeholder="Buscar por título, número..." className="max-w-sm" />
-        <select name="status" defaultValue={status ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+        <Input name="q" defaultValue={q} placeholder="Buscar por título, número..." className="w-full sm:max-w-sm" />
+        <select name="status" defaultValue={status ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background w-full sm:w-auto">
           <option value="">Todos os status</option>
           <option value="aberto">Aberto</option>
           <option value="em_andamento">Em Andamento</option>
@@ -68,20 +68,20 @@ export default async function ChamadosPage({
           <option value="fechado">Fechado</option>
           <option value="reaberto">Reaberto</option>
         </select>
-        <select name="priority" defaultValue={priority ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+        <select name="priority" defaultValue={priority ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background w-full sm:w-auto">
           <option value="">Todas as prioridades</option>
           <option value="critica">Crítica</option>
           <option value="alta">Alta</option>
           <option value="media">Média</option>
           <option value="baixa">Baixa</option>
         </select>
-        <select name="assigned_to" defaultValue={assigned_to ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+        <select name="assigned_to" defaultValue={assigned_to ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background w-full sm:w-auto">
           <option value="">Todos os analistas</option>
           {(allAnalysts ?? []).map((a: any) => (
             <option key={a.id} value={a.id}>{a.full_name}</option>
           ))}
         </select>
-        <select name="company_id" defaultValue={company_id ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background">
+        <select name="company_id" defaultValue={company_id ?? ''} className="border rounded-md px-3 py-2 text-sm bg-background w-full sm:w-auto">
           <option value="">Todas as empresas</option>
           {(allCompanies ?? []).map((c: any) => (
             <option key={c.id} value={c.id}>{c.name}</option>
