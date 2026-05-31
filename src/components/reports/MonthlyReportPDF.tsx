@@ -31,6 +31,12 @@ export interface ReportMonitoringChannel {
   mttr_hours: number | null
 }
 
+export interface MonthTrend {
+  month: string   // "2025-06"
+  label: string   // "Jun/25"
+  count: number
+}
+
 export interface MonthlyReportProps {
   companyName: string
   providerName?: string | null
@@ -40,6 +46,8 @@ export interface MonthlyReportProps {
   meetings?: ReportMeeting[]
   gmuds?: ReportGmud[]
   monitoring?: ReportMonitoringChannel[]
+  monthlyTrend?: MonthTrend[]
+  reportedMonth?: string  // "2025-06"
 }
 
 const palette = {
@@ -84,6 +92,12 @@ const s = StyleSheet.create({
   pill: { fontSize: 7, color: palette.muted, paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1, borderColor: palette.border, borderRadius: 10, alignSelf: 'flex-start' },
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 8, color: palette.muted },
+  // Timeline chart
+  timelineWrap: { position: 'relative', height: 72 },
+  timelineBars: { flexDirection: 'row', height: 72, alignItems: 'flex-end', gap: 2 },
+  timelineBar: { flex: 1, alignItems: 'center', height: 72, justifyContent: 'flex-end' },
+  timelineAvgLine: { position: 'absolute', left: 0, right: 0, height: 0.5, backgroundColor: '#6366f1' },
+  timelineAvgLabel: { position: 'absolute', right: 2, fontSize: 6, color: '#6366f1' },
 })
 
 function BarChart({ data, total }: { data: { label: string; count: number }[]; total: number }) {
@@ -105,6 +119,54 @@ function BarChart({ data, total }: { data: { label: string; count: number }[]; t
   )
 }
 
+const BAR_AREA_H = 60
+const LABEL_H = 12
+
+function TimelineBarChart({ data, average, reportedMonth }: {
+  data: MonthTrend[]
+  average: number
+  reportedMonth: string
+}) {
+  const max = Math.max(...data.map(d => d.count), 1)
+  const avgLineBottom = LABEL_H + (average / max) * BAR_AREA_H
+  const avgLabel = average % 1 === 0 ? String(average) : average.toFixed(1)
+
+  return (
+    <View style={s.timelineWrap}>
+      <View style={[s.timelineAvgLine, { bottom: avgLineBottom }]} />
+      <Text style={[s.timelineAvgLabel, { bottom: avgLineBottom + 2 }]}>
+        Média: {avgLabel}/mês
+      </Text>
+      <View style={s.timelineBars}>
+        {data.map(d => {
+          const barH = d.count > 0 ? Math.max((d.count / max) * BAR_AREA_H, 1.5) : 0
+          const isReported = d.month === reportedMonth
+          return (
+            <View key={d.month} style={s.timelineBar}>
+              <View style={{
+                width: '82%',
+                height: barH,
+                backgroundColor: isReported ? '#1e40af' : '#bfdbfe',
+                borderRadius: 1,
+                marginBottom: LABEL_H,
+              }} />
+              <Text style={{
+                position: 'absolute',
+                bottom: 0,
+                fontSize: 5.5,
+                color: isReported ? '#1e40af' : '#9ca3af',
+                textAlign: 'center',
+              }}>
+                {d.label}
+              </Text>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
 const PRIORITY_LABELS: Record<string, string> = {
   critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa',
 }
@@ -118,6 +180,7 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 export function MonthlyReportPDF({
   companyName, providerName, period, logoUrl, tickets, meetings = [], gmuds = [], monitoring = [],
+  monthlyTrend, reportedMonth,
 }: MonthlyReportProps) {
   const provider = providerName || 'ITRAMOS ITSM'
   const resolved = tickets.filter(t => t.status === 'resolvido').length
@@ -183,6 +246,21 @@ export function MonthlyReportPDF({
             </View>
           </View>
         </View>
+
+        {/* Linha do tempo — últimos 12 meses */}
+        {monthlyTrend && monthlyTrend.length > 0 && reportedMonth && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Evolução Mensal — últimos 12 meses</Text>
+            <TimelineBarChart
+              data={monthlyTrend}
+              average={monthlyTrend.reduce((s, d) => s + d.count, 0) / monthlyTrend.length}
+              reportedMonth={reportedMonth}
+            />
+            <Text style={{ fontSize: 7, color: palette.muted, marginTop: 6 }}>
+              Barra azul escura = mês do relatório. Linha roxa = média mensal do período.
+            </Text>
+          </View>
+        )}
 
         {/* Gráficos */}
         <View style={s.section}>

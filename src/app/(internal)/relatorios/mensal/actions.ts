@@ -5,13 +5,22 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MonthlyReportPDF } from '@/components/reports/MonthlyReportPDF'
-import type { ReportTicket, ReportMeeting, ReportGmud, ReportMonitoringChannel } from '@/components/reports/MonthlyReportPDF'
+import type { ReportTicket, ReportMeeting, ReportGmud, ReportMonitoringChannel, MonthTrend } from '@/components/reports/MonthlyReportPDF'
 import { sendEmail, buildFromAddress } from '@/lib/email'
 import { getPreviousMonthRange } from '@/lib/report-utils'
 import { insertLog } from '@/lib/log'
 
+const MONTH_LABELS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
 async function buildReportData(companyId: string, from: string, to: string) {
   const supabase = await createServiceClient()
+
+  // 12-month window ending at the reported month (for the timeline chart)
+  const toDateObj = new Date(`${to}T00:00:00Z`)
+  const trendEnd = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() + 1, 0, 23, 59, 59))
+  const trendStart = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() - 11, 1))
+  const reportedMonth = `${toDateObj.getUTCFullYear()}-${String(toDateObj.getUTCMonth() + 1).padStart(2, '0')}`
+
   const [
     { data: companyData },
     { data: settingsData },
@@ -19,6 +28,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     { data: meetingsRaw },
     { data: gmudsRaw },
     { data: monitoringRaw },
+    { data: trendRaw },
   ] = await Promise.all([
     supabase.from('companies').select('name').eq('id', companyId).single(),
     supabase.from('platform_settings').select('logo_light_url, email_from_name, email_from_address, company_name').single(),
@@ -50,7 +60,25 @@ async function buildReportData(companyId: string, from: string, to: string) {
       .in('channel', ['zabbix', 'azure_monitor', 'url_monitoring'])
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`),
-  ]) as [{ data: any }, { data: any }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
+    supabase
+      .from('tickets')
+      .select('created_at')
+      .eq('company_id', companyId)
+      .gte('created_at', trendStart.toISOString())
+      .lte('created_at', trendEnd.toISOString()),
+  ]) as [{ data: any }, { data: any }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
+
+  // Build 12-month trend series
+  const trendCounts: Record<string, number> = {}
+  for (const t of trendRaw ?? []) {
+    const m = (t.created_at as string).slice(0, 7)
+    trendCounts[m] = (trendCounts[m] ?? 0) + 1
+  }
+  const monthlyTrend: MonthTrend[] = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() - 11 + i, 1))
+    const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    return { month, label: `${MONTH_LABELS_PT[d.getUTCMonth()]}/${String(d.getUTCFullYear()).slice(2)}`, count: trendCounts[month] ?? 0 }
+  })
 
   const companyName: string = companyData?.name ?? 'Cliente'
   const providerName: string | null = (settingsData as any)?.company_name || null
@@ -120,7 +148,7 @@ async function buildReportData(companyId: string, from: string, to: string) {
     .replace(/^\w/, c => c.toUpperCase())
 
   const pdfBuffer = await renderToBuffer(
-    createElement(MonthlyReportPDF, { companyName, providerName, period, logoUrl, tickets, meetings, gmuds, monitoring }) as any
+    createElement(MonthlyReportPDF, { companyName, providerName, period, logoUrl, tickets, meetings, gmuds, monitoring, monthlyTrend, reportedMonth }) as any
   )
 
   return { companyName, period, pdfBuffer, emailFrom, supabase }
