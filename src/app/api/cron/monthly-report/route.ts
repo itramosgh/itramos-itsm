@@ -3,7 +3,7 @@ import { createElement } from 'react'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MonthlyReportPDF } from '@/components/reports/MonthlyReportPDF'
-import type { ReportTicket, ReportMeeting, ReportGmud, ReportMonitoringChannel } from '@/components/reports/MonthlyReportPDF'
+import type { ReportTicket, ReportMeeting, ReportGmud, ReportMonitoringChannel, MonthTrend } from '@/components/reports/MonthlyReportPDF'
 import { sendEmail, buildFromAddress } from '@/lib/email'
 import { isFirstBusinessDayOfMonth, getPreviousMonthRange } from '@/lib/report-utils'
 import { insertLog } from '@/lib/log'
@@ -31,6 +31,12 @@ export async function GET(request: Request) {
   }
 
   const { from, to } = getPreviousMonthRange(today)
+
+  const MONTH_LABELS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const toDateObj = new Date(`${to}T00:00:00Z`)
+  const trendEnd = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() + 1, 0, 23, 59, 59))
+  const trendStart = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() - 11, 1))
+  const reportedMonth = `${toDateObj.getUTCFullYear()}-${String(toDateObj.getUTCMonth() + 1).padStart(2, '0')}`
 
   const { data: settings } = await supabase
     .from('platform_settings')
@@ -70,6 +76,7 @@ export async function GET(request: Request) {
         { data: meetingsRaw },
         { data: gmudsRaw },
         { data: monitoringRaw },
+        { data: trendRaw },
       ] = await Promise.all([
         supabase
           .from('tickets')
@@ -99,7 +106,13 @@ export async function GET(request: Request) {
           .in('channel', ['zabbix', 'azure_monitor', 'url_monitoring'])
           .gte('created_at', `${from}T00:00:00Z`)
           .lte('created_at', `${to}T23:59:59Z`),
-      ]) as [{ data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
+        supabase
+          .from('tickets')
+          .select('created_at')
+          .eq('company_id', company.id)
+          .gte('created_at', trendStart.toISOString())
+          .lte('created_at', trendEnd.toISOString()),
+      ]) as [{ data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }, { data: any[] | null }]
 
       const analystIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.assigned_to).filter(Boolean))]
       const categoryIds = [...new Set((ticketsRaw ?? []).map((t: any) => t.category_id).filter(Boolean))]
@@ -159,6 +172,17 @@ export async function GET(request: Request) {
         mttr_hours: d.resolvedCount > 0 ? parseFloat((d.totalMs / d.resolvedCount / 3_600_000).toFixed(1)) : null,
       }))
 
+      const trendCounts: Record<string, number> = {}
+      for (const t of trendRaw ?? []) {
+        const m = (t.created_at as string).slice(0, 7)
+        trendCounts[m] = (trendCounts[m] ?? 0) + 1
+      }
+      const monthlyTrend: MonthTrend[] = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(Date.UTC(toDateObj.getUTCFullYear(), toDateObj.getUTCMonth() - 11 + i, 1))
+        const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+        return { month, label: `${MONTH_LABELS_PT[d.getUTCMonth()]}/${String(d.getUTCFullYear()).slice(2)}`, count: trendCounts[month] ?? 0 }
+      })
+
       const fromDate = new Date(`${from}T00:00:00Z`)
       const period = fromDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
         .replace(/^\w/, c => c.toUpperCase())
@@ -173,6 +197,8 @@ export async function GET(request: Request) {
           meetings,
           gmuds,
           monitoring,
+          monthlyTrend,
+          reportedMonth,
         }) as any
       )
 
