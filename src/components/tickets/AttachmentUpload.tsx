@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function AttachmentUpload({ ticketId, interactionId, onUploaded }: Props) {
+  const router = useRouter()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -31,6 +33,7 @@ export function AttachmentUpload({ ticketId, interactionId, onUploaded }: Props)
 
     setUploading(false)
     onUploaded?.()
+    router.refresh()
     if (inputRef.current) inputRef.current.value = ''
   }
 
