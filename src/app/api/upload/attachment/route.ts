@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -45,6 +46,17 @@ export async function POST(request: Request) {
   } as never)
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
+
+  await serviceSupabase.from('ticket_interactions').insert({
+    ticket_id: ticketId,
+    type: 'system',
+    content: `Arquivo anexado: ${file.name}`,
+    author_profile_id: user.id,
+    is_system: false,
+  } as never)
+
+  revalidatePath(`/chamados/${ticketId}`)
+  revalidatePath(`/portal/chamados/${ticketId}`)
 
   return NextResponse.json({ success: true, path })
 }
