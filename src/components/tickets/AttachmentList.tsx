@@ -48,12 +48,7 @@ export function AttachmentList({ attachments, bucket }: Props) {
         window.alert(data?.error ?? 'Erro ao baixar o arquivo. Tente novamente.')
         return
       }
-      const a = document.createElement('a')
-      a.href = data.url
-      a.download = att.filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      window.open(data.url, '_blank', 'noopener,noreferrer')
     } catch {
       window.alert('Erro ao baixar o arquivo. Verifique sua conexão e tente novamente.')
     } finally {
