@@ -3,7 +3,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { isWithinMonitoringWindow, mapZabbixSeverity } from '@/lib/monitoring'
 import { insertLog } from '@/lib/log'
 import { notifyTeams } from '@/lib/teams'
-import { isValidTransition } from '@/lib/ticket-transitions'
 import { calculateTicketSLAForCompany } from '@/lib/ticket-sla'
 
 interface ZabbixPayload {
@@ -77,25 +76,19 @@ export async function POST(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const existingTicket = existingTicketRaw as any
       if (existingTicket) {
-        if (isValidTransition(existingTicket.status, 'resolvido')) {
-          const slaMet = existingTicket.sla_deadline ? new Date() <= new Date(existingTicket.sla_deadline) : null
-          await (supabase.from('tickets') as any).update({
-            status: 'resolvido',
-            resolution: 'Resolvido automaticamente via Zabbix',
-            sla_met: slaMet,
-          }).eq('id', existingTicket.id)
+        const slaMet = existingTicket.sla_deadline ? new Date() <= new Date(existingTicket.sla_deadline) : null
+        await (supabase.from('tickets') as any).update({
+          status: 'resolvido',
+          resolution: 'Resolvido automaticamente via Zabbix',
+          sla_met: slaMet,
+        }).eq('id', existingTicket.id)
 
-          await supabase.from('ticket_interactions').insert({
-            ticket_id: existingTicket.id,
-            type: 'system',
-            content: 'Resolvido automaticamente via Zabbix',
-            is_system: true,
-          } as any)
-        } else {
-          await insertLog(supabase, 'webhook_received', 'success',
-            `Zabbix recovery: status '${existingTicket.status}' não permite transição para resolvido — ignorado`,
-            { ticket_id: existingTicket.id })
-        }
+        await supabase.from('ticket_interactions').insert({
+          ticket_id: existingTicket.id,
+          type: 'system',
+          content: 'Resolvido automaticamente via Zabbix',
+          is_system: true,
+        } as any)
       }
 
       // Clean up pending alerts for this external event
@@ -120,21 +113,19 @@ export async function POST(
       .maybeSingle()
     const existing = existingRaw as any
     if (existing) {
-      if (isValidTransition(existing.status, 'resolvido')) {
-        const slaMet = existing.sla_deadline ? new Date() <= new Date(existing.sla_deadline) : null
-        await (supabase.from('tickets') as any).update({
-          status: 'resolvido',
-          resolution: 'Resolvido automaticamente via Zabbix',
-          sla_met: slaMet,
-        }).eq('id', existing.id)
-        await supabase.from('ticket_interactions').insert({
-          ticket_id: existing.id,
-          type: 'system',
-          content: 'Resolvido automaticamente via Zabbix (recovery recebido fora do horário comercial)',
-          is_system: true,
-        } as any)
-        await insertLog(supabase, 'webhook_received', 'success', `Zabbix: chamado fechado por recovery fora da janela`, { ticket_id: existing.id, external_alert_id: externalAlertId })
-      }
+      const slaMet = existing.sla_deadline ? new Date() <= new Date(existing.sla_deadline) : null
+      await (supabase.from('tickets') as any).update({
+        status: 'resolvido',
+        resolution: 'Resolvido automaticamente via Zabbix',
+        sla_met: slaMet,
+      }).eq('id', existing.id)
+      await supabase.from('ticket_interactions').insert({
+        ticket_id: existing.id,
+        type: 'system',
+        content: 'Resolvido automaticamente via Zabbix (recovery recebido fora do horário comercial)',
+        is_system: true,
+      } as any)
+      await insertLog(supabase, 'webhook_received', 'success', `Zabbix: chamado fechado por recovery fora da janela`, { ticket_id: existing.id, external_alert_id: externalAlertId })
       await (supabase.from('pending_monitoring_alerts') as any)
         .delete()
         .eq('external_alert_id', externalAlertId)
