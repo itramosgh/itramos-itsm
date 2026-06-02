@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList, HardDrive, MessageSquare, RefreshCw,
+  Settings, CalendarDays, Tag, Mail, Monitor, Users, ClipboardList, HardDrive, MessageSquare, RefreshCw, Activity,
 } from 'lucide-react'
 
 const sections = [
@@ -14,6 +14,7 @@ const sections = [
   { href: '/configuracoes/teams', label: 'Microsoft Teams', description: 'Integração com o Microsoft Teams', icon: Users },
   { href: '/configuracoes/logs', label: 'Logs do Sistema', description: 'Histórico de eventos e e-mails', icon: ClipboardList },
   { href: '/configuracoes/storage', label: 'Armazenamento', description: 'Uso de storage por bucket e limpeza de arquivos antigos', icon: HardDrive },
+  { href: '/configuracoes/crons', label: 'Monitoramento de Crons', description: 'Status e histórico de execução dos jobs automáticos', icon: Activity },
 ]
 
 export default function ConfiguracoesPage() {
