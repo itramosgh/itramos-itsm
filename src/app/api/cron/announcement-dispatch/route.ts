@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { dispatchAnnouncement } from '@/app/(internal)/comunicados/actions'
+import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -18,11 +19,26 @@ export async function GET(request: Request) {
     .lte('scheduled_at', now)
 
   let dispatched = 0
+  const errors: string[] = []
+
   for (const ann of scheduled ?? []) {
     const result = await dispatchAnnouncement(supabase, ann.id)
-    if ('success' in result) dispatched++
-    else console.error(`Falha ao despachar comunicado ${ann.id}:`, result.error)
+    if ('success' in result) {
+      dispatched++
+    } else {
+      errors.push(`${ann.id}: ${result.error}`)
+      await insertLog(supabase, 'cron_job', 'failure', `Falha ao despachar comunicado "${ann.subject}"`, {
+        announcement_id: ann.id,
+        error: result.error,
+      })
+    }
   }
+
+  await insertLog(supabase, 'cron_job', 'success', `Cron announcement-dispatch executado — ${dispatched} comunicado(s) despachado(s)`, {
+    dispatched,
+    errors_count: errors.length,
+    ...(errors.length > 0 && { errors }),
+  })
 
   return NextResponse.json({ ok: true, dispatched })
 }

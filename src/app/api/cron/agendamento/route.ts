@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, schedulingReminderHtml, buildFromAddress } from '@/lib/email'
+import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -51,8 +52,9 @@ export async function GET(request: Request) {
       }
 
       if (recipients.length > 0) {
+        const uniqueRecipients = [...new Set(recipients)]
         await sendEmail({
-          to: [...new Set(recipients)],
+          to: uniqueRecipients,
           subject: `Lembrete: atendimento em 15 minutos — Chamado #${ticket.number}`,
           from,
           html: schedulingReminderHtml({
@@ -61,6 +63,14 @@ export async function GET(request: Request) {
             scheduledAtStr: scheduledAt.toLocaleString('pt-BR'),
             appUrl,
           }),
+        })
+
+        await insertLog(supabase, 'email_sent', 'success', `Lembrete de agendamento enviado — Chamado #${ticket.number}`, {
+          ticket_id: ticket.id,
+          ticket_number: ticket.number,
+          recipients: uniqueRecipients,
+          scheduled_at: ticket.scheduled_at,
+          trigger: 'scheduling_reminder_15min',
         })
       }
       actions++
@@ -75,6 +85,14 @@ export async function GET(request: Request) {
         content: 'Atendimento iniciado automaticamente no horário agendado.',
         is_system: true,
       } as never)
+
+      await insertLog(supabase, 'cron_job', 'success', `Chamado #${ticket.number} iniciado automaticamente no horário agendado`, {
+        ticket_id: ticket.id,
+        ticket_number: ticket.number,
+        scheduled_at: ticket.scheduled_at,
+        trigger: 'auto_start_scheduled',
+      })
+
       actions++
     }
   }

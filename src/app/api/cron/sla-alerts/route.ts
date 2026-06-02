@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, slaAlertHtml, buildFromAddress } from '@/lib/email'
 import { notifyTeams } from '@/lib/teams'
+import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -76,6 +77,14 @@ export async function GET(request: Request) {
           appUrl,
         }),
       })
+
+      await insertLog(supabase, 'email_sent', 'success', `Alerta de SLA ${isBreached ? 'violado' : 'próximo de vencer'} enviado — Chamado #${ticket.number}`, {
+        ticket_id: ticket.id,
+        ticket_number: ticket.number,
+        recipient: authUser.user.email,
+        alert_type: isBreached ? 'sla_breach' : 'sla_warning',
+      })
+
       alertsSent++
     }
 
@@ -96,6 +105,10 @@ export async function GET(request: Request) {
       // Teams failure doesn't stop SLA alerts
     }
   }
+
+  await insertLog(supabase, 'cron_job', 'success', `Cron sla-alerts executado — ${alertsSent} alerta(s) enviado(s)`, {
+    alerts_sent: alertsSent,
+  })
 
   return NextResponse.json({ ok: true, alertsSent })
 }

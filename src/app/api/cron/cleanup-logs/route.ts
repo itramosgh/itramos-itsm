@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -24,14 +25,22 @@ export async function GET(request: Request) {
     .map(r => (r as any).error?.message)
     .filter(Boolean)
 
-  if (errors.length > 0) return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
+  if (errors.length > 0) {
+    await insertLog(supabase, 'cron_job', 'failure', `Cron cleanup-logs executado com erros`, {
+      errors,
+    })
+    return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
+  }
 
-  return NextResponse.json({
-    ok: true,
+  const counts = {
     system_logs_deleted: logsResult.count ?? 0,
     url_check_history_deleted: historyResult.count ?? 0,
     pending_email_tickets_deleted: (pendingEmailsResult as any).count ?? 0,
     pending_monitoring_alerts_deleted: (pendingAlertsResult as any).count ?? 0,
     holiday_notice_sent_deleted: (holidayNoticesResult as any).count ?? 0,
-  })
+  }
+
+  await insertLog(supabase, 'cron_job', 'success', `Cron cleanup-logs executado — ${Object.values(counts).reduce((a, b) => a + b, 0)} registro(s) removido(s)`, counts)
+
+  return NextResponse.json({ ok: true, ...counts })
 }

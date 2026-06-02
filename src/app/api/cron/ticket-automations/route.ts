@@ -136,14 +136,31 @@ export async function GET(request: Request) {
       if (au.user?.email) recipients.push(au.user.email)
     }
 
-    if (recipients.length > 0) {
+    const uniqueRecipients = [...new Set(recipients)]
+    if (uniqueRecipients.length > 0) {
       await sendEmail({
-        to: [...new Set(recipients)],
+        to: uniqueRecipients,
         subject: `Chamado #${ticket.number} encerrado — ausência de aprovação`,
         from,
         html: `<p>O chamado <strong>#${ticket.number} — ${ticket.title}</strong> foi encerrado automaticamente por ausência de aprovação após 2 dias.</p>`,
       })
+
+      await insertLog(supabase, 'email_sent', 'success', `Notificação de encerramento por falta de aprovação enviada — Chamado #${ticket.number}`, {
+        ticket_id: approval.ticket_id,
+        ticket_number: ticket.number,
+        approval_id: approval.id,
+        recipients: uniqueRecipients,
+        trigger: 'approval_expired_notification',
+      })
     }
+
+    await insertLog(supabase, 'approval', 'success', `Aprovação expirada e chamado #${ticket.number} encerrado automaticamente após 2 dias`, {
+      ticket_id: approval.ticket_id,
+      ticket_number: ticket.number,
+      approval_id: approval.id,
+      trigger: 'auto_close_approval_48h',
+    })
+
     actions++
   }
 
