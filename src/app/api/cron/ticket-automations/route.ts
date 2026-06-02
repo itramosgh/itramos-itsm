@@ -67,7 +67,19 @@ export async function GET(request: Request) {
     }
 
     if (hoursSinceUpdate >= 24) {
-      // Lembrete a cada 24h
+      // Verificar se já foi enviado lembrete nas últimas 24h para não repetir por execução do cron
+      const since24h = new Date(now.getTime() - 24 * 3_600_000).toISOString()
+      const { data: recentReminder } = await supabase
+        .from('ticket_interactions')
+        .select('id')
+        .eq('ticket_id', ticket.id)
+        .eq('is_system', true)
+        .eq('content', 'Lembrete automático de retorno enviado ao solicitante.')
+        .gte('created_at', since24h)
+        .limit(1)
+
+      if (recentReminder && recentReminder.length > 0) continue
+
       const contactEmails = await resolveContactEmails(supabase, ticket.contact_id, ticket.company_id)
       if (contactEmails.length > 0) {
         await sendEmail({
