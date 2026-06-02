@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, awaitingClientReminderHtml, buildFromAddress } from '@/lib/email'
 import { resolveContactEmails } from '@/lib/email-notifications'
+import { insertLog } from '@/lib/log'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -44,6 +45,12 @@ export async function GET(request: Request) {
         is_system: true,
       } as never)
 
+      await insertLog(supabase, 'cron_job', 'success', `Chamado #${ticket.number} encerrado automaticamente por ausência de retorno do cliente`, {
+        ticket_id: ticket.id,
+        ticket_number: ticket.number,
+        trigger: 'auto_close_48h',
+      })
+
       if (ticket.assigned_to) {
         const { data: authUser } = await supabase.auth.admin.getUserById(ticket.assigned_to)
         if (authUser.user?.email) {
@@ -80,6 +87,13 @@ export async function GET(request: Request) {
           content: 'Lembrete automático de retorno enviado ao solicitante.',
           is_system: true,
         } as never)
+
+        await insertLog(supabase, 'email_sent', 'success', `Lembrete de retorno enviado ao cliente — Chamado #${ticket.number}`, {
+          ticket_id: ticket.id,
+          ticket_number: ticket.number,
+          recipients: contactEmails,
+          trigger: 'awaiting_client_reminder_24h',
+        })
       }
       actions++
     }
