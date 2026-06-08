@@ -1,5 +1,5 @@
 'use client'
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sendPortalReplyAction } from './actions'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,8 @@ interface Props {
 
 export function PortalReplyForm({ ticketId }: Props) {
   const [state, formAction, pending] = useActionState(sendPortalReplyAction, null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Captura os arquivos em state antes do form ser resetado pela Server Action
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const formRef = useRef<HTMLFormElement>(null)
   const router = useRouter()
 
@@ -20,16 +21,16 @@ export function PortalReplyForm({ ticketId }: Props) {
     if (!state || !('ok' in state)) return
 
     async function uploadFilesAndRefresh() {
-      const files = fileInputRef.current?.files
-      if (files && files.length > 0) {
+      if (selectedFiles.length > 0) {
         const failedFiles: string[] = []
-        for (const file of Array.from(files)) {
+        for (const file of selectedFiles) {
           const fd = new FormData()
           fd.append('file', file)
           fd.append('ticket_id', ticketId)
           const res = await fetch('/api/upload/attachment', { method: 'POST', body: fd })
           if (!res.ok) failedFiles.push(file.name)
         }
+        setSelectedFiles([])
         if (failedFiles.length > 0) {
           window.alert(`Resposta enviada! Alguns arquivos não puderam ser enviados: ${failedFiles.join(', ')}`)
         }
@@ -54,9 +55,9 @@ export function PortalReplyForm({ ticketId }: Props) {
           Anexos (opcional)
         </label>
         <input
-          ref={fileInputRef}
           type="file"
           multiple
+          onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
           className="block w-full text-sm text-muted-foreground
             file:mr-3 file:py-1 file:px-3 file:rounded-md file:border
             file:text-xs file:font-medium file:bg-muted file:text-foreground
