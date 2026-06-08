@@ -4,6 +4,8 @@ import { sendEmail, slaAlertHtml, buildFromAddress } from '@/lib/email'
 import { notifyTeams } from '@/lib/teams'
 import { insertLog } from '@/lib/log'
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -12,6 +14,7 @@ export async function GET(request: Request) {
 
   const supabase = await createServiceClient()
   const now = new Date()
+  const nowMs = now.getTime()
 
   const { data: settings } = await supabase
     .from('platform_settings')
@@ -39,19 +42,43 @@ export async function GET(request: Request) {
   for (const ticket of (openTickets ?? []) as any[]) {
     const deadline = new Date(ticket.sla_deadline!)
     const deadlineMs = deadline.getTime()
-    const nowMs = now.getTime()
 
     const pausedMs = ticket.sla_paused_at ? nowMs - new Date(ticket.sla_paused_at).getTime() : 0
     const effectiveNowMs = nowMs - pausedMs
-
-    const totalMs = deadlineMs - new Date(ticket.created_at).getTime()
     const remainingMs = deadlineMs - effectiveNowMs
-    const pctUsed = 1 - remainingMs / totalMs
 
     const isBreached = effectiveNowMs > deadlineMs
-    const isNearBreach = !isBreached && pctUsed >= 0.8
+    // Alerta apenas quando faltam até 2h para o vencimento
+    const isNearBreach = !isBreached && remainingMs <= TWO_HOURS_MS
 
     if (!isBreached && !isNearBreach) continue
+
+    // Deduplicação: sla_warning enviado apenas 1x por chamado
+    if (isNearBreach) {
+      const { data: existing } = await supabase
+        .from('system_logs')
+        .select('id')
+        .eq('category', 'email_sent')
+        .contains('details', { ticket_id: ticket.id, alert_type: 'sla_warning' })
+        .limit(1)
+        .maybeSingle()
+      if (existing) continue
+    }
+
+    // Deduplicação: sla_breach enviado no máximo 1x por dia por chamado
+    if (isBreached) {
+      const todayStart = new Date(now)
+      todayStart.setHours(0, 0, 0, 0)
+      const { data: existing } = await supabase
+        .from('system_logs')
+        .select('id')
+        .eq('category', 'email_sent')
+        .contains('details', { ticket_id: ticket.id, alert_type: 'sla_breach' })
+        .gte('created_at', todayStart.toISOString())
+        .limit(1)
+        .maybeSingle()
+      if (existing) continue
+    }
 
     const recipientIds = new Set<string>()
     if (ticket.assigned_to) recipientIds.add(ticket.assigned_to)
@@ -97,8 +124,8 @@ export async function GET(request: Request) {
         ticketNumber: String(ticket.number),
         ticketId: ticket.id,
         title: ticket.title,
-        timeRemaining: isBreached ? 'SLA violado' : `${Math.round((deadline.getTime() - effectiveNowMs) / 60000)} min`,
-        breachTime: isBreached ? `${Math.round((effectiveNowMs - deadline.getTime()) / 60000)} min` : '',
+        timeRemaining: isBreached ? 'SLA violado' : `${Math.round(remainingMs / 60000)} min`,
+        breachTime: isBreached ? `${Math.round((effectiveNowMs - deadlineMs) / 60000)} min` : '',
         assignedTo: assignedProfile?.email ?? 'Não atribuído',
       })
     } catch {
