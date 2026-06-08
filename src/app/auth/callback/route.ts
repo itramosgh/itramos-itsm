@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { data } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    if (exchangeError) {
+      console.error('[auth/callback] exchangeCodeForSession error:', exchangeError.message, exchangeError)
+    }
 
     // Log SSO logins via Azure AD
     if (data?.session?.user?.app_metadata?.provider === 'azure') {

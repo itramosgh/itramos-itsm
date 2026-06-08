@@ -1,10 +1,60 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { portalResetPasswordAction } from './actions'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+type Status = 'loading' | 'ready' | 'invalid'
+
 export default function PortalRedefinirSenhaPage() {
+  const [status, setStatus] = useState<Status>('loading')
   const [state, action, pending] = useActionState(portalResetPasswordAction, null)
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        if (session) {
+          setStatus('ready')
+        } else {
+          // No session from cookies — may arrive via hash-based OTP token
+          const timer = setTimeout(() => setStatus(prev => prev === 'loading' ? 'invalid' : prev), 1500)
+          return () => clearTimeout(timer)
+        }
+      } else if (session) {
+        setStatus('ready')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-4 p-8 border rounded-lg text-center">
+          <p className="text-sm text-muted-foreground">Verificando link...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'invalid') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-4 p-8 border rounded-lg text-center">
+          <h1 className="text-xl font-semibold">Link inválido ou expirado</h1>
+          <p className="text-sm text-muted-foreground">
+            Este link de redefinição não é mais válido. Solicite um novo.
+          </p>
+          <Link href="/portal/esqueci-senha" className="text-sm text-primary hover:underline">
+            Solicitar novo link
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if ((state as any)?.success) {
     return (

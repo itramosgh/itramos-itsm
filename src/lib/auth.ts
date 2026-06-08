@@ -6,7 +6,7 @@ export function isInternalPath(pathname: string) {
 }
 
 // Rotas do portal que não requerem autenticação
-const PORTAL_PUBLIC_PATHS = ['/portal/login', '/portal/criar-conta', '/portal/esqueci-senha']
+const PORTAL_PUBLIC_PATHS = ['/portal/login', '/portal/criar-conta', '/portal/esqueci-senha', '/portal/redefinir-senha']
 
 export function isPortalPath(pathname: string) {
   if (PORTAL_PUBLIC_PATHS.some(p => pathname.startsWith(p))) return false

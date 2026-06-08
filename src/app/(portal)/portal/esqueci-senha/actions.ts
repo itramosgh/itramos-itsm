@@ -14,6 +14,9 @@ export async function portalForgotPasswordAction(
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/portal/redefinir-senha`,
   })
 
-  if (error) return { error: 'Erro ao enviar e-mail. Tente novamente.', success: false }
+  if (error) {
+    console.error('[portalForgotPassword] Supabase error:', error.message, error)
+    return { error: 'Erro ao enviar e-mail. Tente novamente.', success: false }
+  }
   return { error: '', success: true }
 }

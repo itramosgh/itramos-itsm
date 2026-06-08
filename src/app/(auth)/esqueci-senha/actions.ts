@@ -14,6 +14,9 @@ export async function forgotPasswordAction(
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/redefinir-senha`,
   })
 
-  if (error) return { error: 'Erro ao enviar e-mail. Tente novamente.', success: false }
+  if (error) {
+    console.error('[forgotPassword] Supabase error:', error.message, error)
+    return { error: 'Erro ao enviar e-mail. Tente novamente.', success: false }
+  }
   return { error: '', success: true }
 }
