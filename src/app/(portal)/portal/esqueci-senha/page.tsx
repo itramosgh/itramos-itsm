@@ -1,10 +1,13 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { portalForgotPasswordAction } from './actions'
 import Link from 'next/link'
 
-export default function PortalEsqueciSenhaPage() {
+function EsqueciSenhaForm() {
   const [state, action, pending] = useActionState(portalForgotPasswordAction, null)
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
 
   if (state?.success) {
     return (
@@ -31,6 +34,11 @@ export default function PortalEsqueciSenhaPage() {
             Informe seu e-mail para receber o link de redefinição.
           </p>
         </div>
+        {urlError === 'link_expirado' && (
+          <p className="text-sm text-destructive">
+            O link expirou ou já foi utilizado. Solicite um novo abaixo.
+          </p>
+        )}
         <form action={action} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium">E-mail</label>
@@ -59,5 +67,21 @@ export default function PortalEsqueciSenhaPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function PortalEsqueciSenhaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-6 p-8 border rounded-lg">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">Esqueci minha senha</h1>
+          </div>
+        </div>
+      </div>
+    }>
+      <EsqueciSenhaForm />
+    </Suspense>
   )
 }
